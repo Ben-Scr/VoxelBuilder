@@ -1,7 +1,7 @@
 using UnityEngine;
-using static BenScr.MCC.SettingsContainer;
+using static BenScr.MinecraftClone.SettingsContainer;
 
-namespace BenScr.MCC
+namespace BenScr.MinecraftClone
 {
     public enum MovementMode
     {
@@ -17,6 +17,8 @@ namespace BenScr.MCC
         [SerializeField] private float runSpeed = 8f;
         [SerializeField] private float crouchSpeed = 2.5f;
         [SerializeField] private float jumpForce = 5f;
+        private bool isGrounded;
+        internal bool isSpectator => isFlying && !capsuleCollider.enabled;
 
         [Header("Camera")]
         [SerializeField] private float cameraSensitivity = 2f;
@@ -30,6 +32,10 @@ namespace BenScr.MCC
         [SerializeField] private float maxFlySpeedMultiplier = 10f;
         [SerializeField] private float flySpeed = 10f;
         [SerializeField] private float flyAcceleration = 5f;
+
+        private float curFlySpeedMultiplier = 1;
+        private bool isFlying => movementMode == MovementMode.Flying;
+
 
         [Header("Physics")]
         [SerializeField] private float maxVelocityY = 50f;
@@ -45,28 +51,30 @@ namespace BenScr.MCC
         [SerializeField] private float swimDrag = 3f;
         [SerializeField] private float swimAngularDrag = 1.5f;
         private UnderwaterPostEffect underwaterEffect;
+        internal bool isHeadInFluid;
+        private bool isInFluid;
+        internal Block currentFluidBlock;
+        private float defaultDrag;
+        private float defaultAngularDrag;
 
-        private float curFlySpeedMultiplier = 1;
-        private bool isFlying => movementMode == MovementMode.Flying;
-        public bool isSpectator => isFlying && !capsuleCollider.enabled;
 
         private Rigidbody rb;
         private CapsuleCollider capsuleCollider;
-        private bool isHeadInFluid;
-        private bool isInFluid;
-        private Block currentFluidBlock;
-        private float defaultDrag;
-        private float defaultAngularDrag;
 
         private float inputSpace = 0;
         public static PlayerController instance;
 
-        public bool IsInFluid => isInFluid;
-        public bool IsHeadInFluid => isHeadInFluid;
+        private static readonly Vector3[] fluidCheckDirections = new Vector3[]
+        {
+            Vector3.zero,
+            Vector3.up,
+            Vector3.down,
+            Vector3.left,
+            Vector3.right,
+            Vector3.forward,
+            Vector3.back
+        };
 
-        public Block CurrentFluidBlock => currentFluidBlock;
-
-        private bool isGrounded;
         private void Awake()
         {
             instance = this;
@@ -103,10 +111,13 @@ namespace BenScr.MCC
             isGrounded = IsGrounded();
             inputSpace += Time.deltaTime;
 
-
             UpdateFluidState();
             Movement();
+            Rotation();
+        }
 
+        private void Rotation()
+        {
             Vector3 eulerAnglesY = playerMeshTr.eulerAngles;
             Vector3 eulerAnglesX = playerCamera.transform.eulerAngles;
 
@@ -120,46 +131,6 @@ namespace BenScr.MCC
                 playerMeshTr.eulerAngles.y,
                 eulerAnglesX.z
                 );
-
-
-            if (!isFlying && !isInFluid && isGrounded && rb.linearVelocity.magnitude < 0.1f)
-            {
-                rb.linearVelocity = Vector3.zero;
-            }
-
-            if (Input.GetKey(KeyCode.Space) && !isInFluid && isGrounded)
-            {
-                Jump();
-            }
-
-            if (Input.GetKeyDown(KeyCode.Space))
-            {
-                if (!isSpectator && inputSpace < doubleSpaceThreshold)
-                {
-                    SetFlyingMode();
-                }
-                else
-                {
-                    inputSpace = 0;
-                }
-            }
-
-
-            if (Input.GetKeyDown(KeyCode.Escape))
-            {
-                Cursor.lockState = CursorLockMode.None;
-                Cursor.visible = true;
-            }
-            else if (Input.anyKeyDown)
-            {
-                Cursor.lockState = CursorLockMode.Locked;
-                Cursor.visible = false;
-            }
-
-            if (Input.GetKeyDown(KeyCode.F1))
-            {
-                SetSpectatorMode();
-            }
         }
 
         private void Movement()
@@ -186,6 +157,34 @@ namespace BenScr.MCC
             else
             {
                 transform.position += input * Time.deltaTime;
+            }
+
+            if (Input.GetKey(KeyCode.Space) && !isInFluid && isGrounded)
+            {
+                Jump();
+            }
+
+            if (Input.GetKeyDown(KeyCode.Space))
+            {
+                if (!isSpectator && inputSpace < doubleSpaceThreshold)
+                {
+                    SetFlyingMode();
+                }
+                else
+                {
+                    inputSpace = 0;
+                }
+            }
+
+            if (Input.GetKeyDown(KeyCode.F1))
+            {
+                SetSpectatorMode();
+            }
+
+
+            if (!isFlying && !isInFluid && isGrounded && rb.linearVelocity.magnitude < 0.1f)
+            {
+                rb.linearVelocity = Vector3.zero;
             }
         }
 
@@ -407,17 +406,6 @@ namespace BenScr.MCC
 
             return false;
         }
-
-        private static readonly Vector3[] fluidCheckDirections = new Vector3[]
-        {
-            Vector3.zero,
-            Vector3.up,
-            Vector3.down,
-            Vector3.left,
-            Vector3.right,
-            Vector3.forward,
-            Vector3.back
-        };
 
         private void OnDrawGizmos()
         {

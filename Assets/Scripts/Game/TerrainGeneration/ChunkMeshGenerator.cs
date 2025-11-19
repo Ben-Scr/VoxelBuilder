@@ -5,13 +5,13 @@ using System.Threading;
 using Unity.Collections;
 using UnityEngine;
 
-namespace BenScr.MCC
+namespace BenScr.MinecraftClone
 {
     using static AssetsContainer;
 
     public class ChunkMeshGenerator
     {
-        public static readonly ConcurrentQueue<ThreadInfo<ChunkMeshData>> meshDataThreadInfoQueue = new ConcurrentQueue<ThreadInfo<ChunkMeshData>>();
+        public static readonly ConcurrentQueue<ThreadInfo<MeshData>> meshDataThreadInfoQueue = new ConcurrentQueue<ThreadInfo<MeshData>>();
 
         public static void Update()
         {
@@ -21,7 +21,7 @@ namespace BenScr.MCC
             }
         }
 
-        public static void RequestMeshData(byte[,,] haloBlocks, Action<ChunkMeshData> callback)
+        public static void RequestMeshData(byte[,,] haloBlocks, Action<MeshData> callback)
         {
             ThreadPool.QueueUserWorkItem(_ =>
             {
@@ -29,14 +29,14 @@ namespace BenScr.MCC
             });
         }
 
-        private static void MeshDataThread([ReadOnly] in byte[,,] haloBlocks, Action<ChunkMeshData> callback)
+        private static void MeshDataThread([ReadOnly] in byte[,,] haloBlocks, Action<MeshData> callback)
         {
-            ChunkMeshData meshData = GenerateMeshData(haloBlocks);
-            meshDataThreadInfoQueue.Enqueue(new ThreadInfo<ChunkMeshData>(callback, meshData));
+            MeshData meshData = GenerateMeshData(haloBlocks);
+            meshDataThreadInfoQueue.Enqueue(new ThreadInfo<MeshData>(callback, meshData));
         }
 
 
-        public static ChunkMeshData GenerateMeshData([ReadOnly] in byte[,,] haloBlocks)
+        public static MeshData GenerateMeshData([ReadOnly] in byte[,,] haloBlocks)
         {
             List<Vector3> solidVertices = new List<Vector3>();
             List<Vector3> solidNormals = new List<Vector3>();
@@ -90,9 +90,9 @@ namespace BenScr.MCC
                 }
             }
 
-            return new ChunkMeshData(
-                new ChunkMeshSection(solidTriangles, solidVertices, solidNormals, solidUvs),
-                new ChunkMeshSection(fluidTriangles, fluidVertices, fluidNormals, fluidUvs));
+            return new MeshData(
+                new MeshSection(solidTriangles, solidVertices, solidNormals, solidUvs),
+                new MeshSection(fluidTriangles, fluidVertices, fluidNormals, fluidUvs));
         }
 
         private static void AddFace(
@@ -208,26 +208,26 @@ namespace BenScr.MCC
         }
     }
 
-    public readonly struct ChunkMeshData
+    public readonly struct MeshData
     {
-        public readonly ChunkMeshSection solidMesh;
-        public readonly ChunkMeshSection fluidMesh;
+        public readonly MeshSection solidMesh;
+        public readonly MeshSection fluidMesh;
 
-        public ChunkMeshData(ChunkMeshSection solidMesh, ChunkMeshSection fluidMesh)
+        public MeshData(MeshSection solidMesh, MeshSection fluidMesh)
         {
             this.solidMesh = solidMesh;
             this.fluidMesh = fluidMesh;
         }
     }
 
-    public readonly struct ChunkMeshSection
+    public readonly struct MeshSection
     {
         public readonly int[] triangles;
         public readonly Vector3[] vertices;
         public readonly Vector3[] normals;
         public readonly Vector2[] uvs;
 
-        public ChunkMeshSection(List<int> triangles, List<Vector3> vertices, List<Vector3> normals, List<Vector2> uvs)
+        public MeshSection(List<int> triangles, List<Vector3> vertices, List<Vector3> normals, List<Vector2> uvs)
         {
             this.triangles = triangles.ToArray();
             this.vertices = vertices.ToArray();

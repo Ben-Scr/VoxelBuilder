@@ -1,6 +1,6 @@
 ﻿using Unity.Mathematics;
 
-namespace BenScr.MCC
+namespace BenScr.MinecraftClone
 {
     public static class TerrainNoiseUtility
     {

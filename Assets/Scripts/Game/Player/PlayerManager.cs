@@ -1,25 +1,23 @@
 using UnityEngine;
 
-namespace BenScr.MCC
+namespace BenScr.MinecraftClone
 {
     public class PlayerManager : MonoBehaviour
     {
-        private static readonly Vector3 HalfExtents = new Vector3(0.499f, 0.499f, 0.499f);
+        private static readonly Vector3 halfExtents = new Vector3(0.499f, 0.499f, 0.499f);
 
         [SerializeField] private float maxInteractionDistance = 5;
         [SerializeField] private GameObject highlightBlock;
+        [SerializeField] private float breakBlockCooldown = 0.1f;
+        [SerializeField] private float placeBlockCooldown = 0.1f;
+        [SerializeField] private Block selectedBlock;
 
         private Vector3 highlightPosition;
         private Vector3 placeBlockPosition;
-        private bool highlightBlockVisible = false;
-
-        [SerializeField] private float breakBlockCooldown = 0.1f;
-        [SerializeField] private float placeBlockCooldown = 0.1f;
+        private bool isHighlightBlockVisible = false;
 
         private float breakBlockTimer = 0f;
         private float placeBlockTimer = 0f;
-
-        public Block selectedBlock;
 
         void Update()
         {
@@ -35,7 +33,7 @@ namespace BenScr.MCC
             breakBlockTimer += Time.deltaTime;
             placeBlockTimer += Time.deltaTime;
 
-            if (highlightBlockVisible)
+            if (isHighlightBlockVisible)
             {
                 if (Input.GetMouseButton(0) && breakBlockTimer > breakBlockCooldown)
                 {
@@ -47,7 +45,7 @@ namespace BenScr.MCC
                 {
                     placeBlockTimer = 0f;
                     Vector3 center = placeBlockPosition + new Vector3(0.5f, 0.5f, 0.5f);
-                    bool overlapsWithPlayer = Physics.CheckBox(center, HalfExtents, Quaternion.identity, LayerMask.GetMask("Player"));
+                    bool overlapsWithPlayer = Physics.CheckBox(center, halfExtents, Quaternion.identity, LayerMask.GetMask("Player"));
 
                     if (!overlapsWithPlayer)
                     {
@@ -63,7 +61,7 @@ namespace BenScr.MCC
         {
             float distance = 0;
 
-            highlightBlockVisible = false;
+            isHighlightBlockVisible = false;
             highlightBlock.SetActive(false);
 
             Vector3 lastPosition = Vector3.zero;
@@ -94,7 +92,7 @@ namespace BenScr.MCC
 
                     highlightBlock.transform.position = highlightPosition + new Vector3(0.5f, 0.5f, 0.5f);
 
-                    highlightBlockVisible = true;
+                    isHighlightBlockVisible = true;
                     highlightBlock.SetActive(true);
 
                     placeBlockPosition = lastPosition;

@@ -1,7 +1,7 @@
 using TMPro;
 using UnityEngine;
 
-namespace BenScr.MCC
+namespace BenScr.MinecraftClone
 {
     public class GameController : MonoBehaviour
     {

@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace BenScr.MCC
+namespace BenScr.MinecraftClone
 {
     public class AssetsContainer : MonoBehaviour
     {

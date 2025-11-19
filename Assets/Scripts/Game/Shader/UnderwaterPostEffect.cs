@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace BenScr.MCC
+namespace BenScr.MinecraftClone
 {
     [RequireComponent(typeof(Camera))]
     public class UnderwaterPostEffect : MonoBehaviour
@@ -81,7 +81,7 @@ namespace BenScr.MCC
                 player = GetComponentInParent<PlayerController>();
             }
 
-            bool isUnderwater = player != null && player.IsHeadInFluid;
+            bool isUnderwater = player != null && player.isHeadInFluid;
             float targetStrength = isUnderwater ? maxStrength : 0f;
             currentStrength = Mathf.MoveTowards(currentStrength, targetStrength, transitionSpeed * Time.deltaTime);
 

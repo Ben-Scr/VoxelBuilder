@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace BenScr.MCC
+namespace BenScr.MinecraftClone
 {
     public class SettingsContainer : MonoBehaviour
     {

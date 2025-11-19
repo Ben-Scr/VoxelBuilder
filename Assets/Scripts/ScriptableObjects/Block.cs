@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace BenScr.MCC
+namespace BenScr.MinecraftClone
 {
 
     [CreateAssetMenu(fileName = "Block", menuName = "Scriptable Objects/Blocks/Block")]

@@ -4,18 +4,18 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 
-namespace BenScr.MCC
+namespace BenScr.MinecraftClone
 {
     public static class NoiseGenerator
     {
-        public static byte[] GenerateBlocksParallel(Vector3 position, float noiseHeight, float noiseScale, Vector2 noiseOffset, int groundOffset)
+        public static byte[] GenerateNoisemapThreaded(Vector3 position, float noiseHeight, float noiseScale, Vector2 noiseOffset, int groundOffset)
         {
             const int LENGTH = Chunk.CHUNK_SIZE * Chunk.CHUNK_SIZE * Chunk.CHUNK_HEIGHT;
             var map = new NativeArray<byte>(LENGTH, Allocator.TempJob);
 
-            GenerateBlocksJob job = new GenerateBlocksJob
+            GenerateNoisemapJob job = new GenerateNoisemapJob
             {
-                Map = map,
+                map = map,
                 position = position,
                 noiseHeight = noiseHeight,
                 noiseScale = noiseScale,
@@ -32,9 +32,9 @@ namespace BenScr.MCC
 
 
         [BurstCompile]
-        public struct GenerateBlocksJob : IJobParallelFor
+        public struct GenerateNoisemapJob : IJobParallelFor
         {
-            [WriteOnly] public NativeArray<byte> Map;
+            [WriteOnly] public NativeArray<byte> map;
 
             [ReadOnly] public Vector3 position;
             [ReadOnly] public float noiseHeight;
@@ -54,23 +54,23 @@ namespace BenScr.MCC
 
                 if (y > groundLevel)
                 {
-                    Map[index] = Chunk.BLOCK_AIR;
+                    map[index] = Chunk.BLOCK_AIR;
                 }
                 else
                 {
                     if (y == groundLevel)
                     {
-                        Map[index] = Chunk.BLOCK_GRASS;
+                        map[index] = Chunk.BLOCK_GRASS;
                     }
                     else
                     {
                         if (y > groundLevel - 5)
                         {
-                            Map[index] = Chunk.BLOCK_DIRT;
+                            map[index] = Chunk.BLOCK_DIRT;
                         }
                         else
                         {
-                            Map[index] = Chunk.BLOCK_STONE;
+                            map[index] = Chunk.BLOCK_STONE;
                         }
                     }
                 }
@@ -90,68 +90,40 @@ namespace BenScr.MCC
     [BurstCompile]
     public struct GenerateTerrainHeightMapJob : IJobParallelFor
     {
-        [WriteOnly]
-        public NativeArray<int> HeightMap;
-
-        [ReadOnly]
-        public int ChunkSize;
-
-        [ReadOnly]
-        public float2 ChunkOrigin;
-
-        [ReadOnly]
-        public NoiseLayer ContinentLayer;
-
-        [ReadOnly]
-        public NoiseLayer MountainLayer;
-
-        [ReadOnly]
-        public NoiseLayer DetailLayer;
-
-        [ReadOnly]
-        public NoiseLayer RidgeLayer;
-
-        [ReadOnly]
-        public float FlatlandsHeightMultiplier;
-
-        [ReadOnly]
-        public float MountainHeightMultiplier;
-
-        [ReadOnly]
-        public float MountainBlendStart;
-
-        [ReadOnly]
-        public float MountainBlendSharpness;
-
-        [ReadOnly]
-        public int GroundOffset;
-
-        [ReadOnly]
-        public float NoiseHeight;
+        [WriteOnly] public NativeArray<int> heightMap;
+        [ReadOnly] public int chunkSize;
+        [ReadOnly] public float2 chunkOrigin;
+        [ReadOnly] public NoiseLayer continentLayer;
+        [ReadOnly] public NoiseLayer mountainLayer;
+        [ReadOnly] public NoiseLayer detailLayer;
+        [ReadOnly] public NoiseLayer ridgeLayer;
+        [ReadOnly] public float flatlandsHeightMultiplier;
+        [ReadOnly] public float mountainHeightMultiplier;
+        [ReadOnly] public float mountainBlendStart;
+        [ReadOnly] public float mountainBlendSharpness;
+        [ReadOnly] public int groundOffset;
+        [ReadOnly] public float noiseHeight;
 
         public void Execute(int index)
         {
-            int x = index % ChunkSize;
-            int z = index / ChunkSize;
+            int x = index % chunkSize;
+            int z = index / chunkSize;
 
-            float2 worldPosition = ChunkOrigin + new float2(x, z);
+            float2 worldPosition = chunkOrigin + new float2(x, z);
 
             float height = TerrainNoiseUtility.SampleNormalizedHeight(
                 worldPosition,
-                ContinentLayer,
-                MountainLayer,
-                DetailLayer,
-                RidgeLayer,
-                FlatlandsHeightMultiplier,
-                MountainHeightMultiplier,
-                MountainBlendStart,
-                MountainBlendSharpness);
+                continentLayer,
+                mountainLayer,
+                detailLayer,
+                ridgeLayer,
+                flatlandsHeightMultiplier,
+                mountainHeightMultiplier,
+                mountainBlendStart,
+                mountainBlendSharpness);
 
-
-
-            //float normalizedHeight = math.clamp(height, 0f, 10000f);
-            int groundLevel = (int)math.floor(height * NoiseHeight) + GroundOffset;
-            HeightMap[index] = groundLevel;
+            int groundLevel = (int)math.floor(height * noiseHeight) + groundOffset;
+            heightMap[index] = groundLevel;
         }
     }
 }

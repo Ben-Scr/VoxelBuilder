@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace BenScr.MCC
+namespace BenScr.MinecraftClone
 {
     public static class ChunkUtility
     {
@@ -42,6 +42,17 @@ namespace BenScr.MCC
 
             return true;
         }
+        public static bool HasAllNeighborChunks(Vector3Int chunkCoord)
+        {
+            return TerrainGenerator.chunks.ContainsKey(chunkCoord + Vector3Int.right) &&
+                   TerrainGenerator.chunks.ContainsKey(chunkCoord + Vector3Int.left) &&
+                   TerrainGenerator.chunks.ContainsKey(chunkCoord + Vector3Int.forward) &&
+                   TerrainGenerator.chunks.ContainsKey(chunkCoord + Vector3Int.back) &&
+                   TerrainGenerator.chunks.ContainsKey(chunkCoord + Vector3Int.up) &&
+                   TerrainGenerator.chunks.ContainsKey(chunkCoord + Vector3Int.down);
+        }
+
+
         public static Chunk GetChunkByCoordinate(Vector3Int coordinate)
         {
             if (TerrainGenerator.chunks.TryGetValue(coordinate, out Chunk chunk))

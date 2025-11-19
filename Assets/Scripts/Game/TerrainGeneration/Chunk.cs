@@ -6,9 +6,9 @@ using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
-using static BenScr.MCC.SettingsContainer;
+using static BenScr.MinecraftClone.SettingsContainer;
 
-namespace BenScr.MCC
+namespace BenScr.MinecraftClone
 {
     public class Chunk
     {
@@ -140,19 +140,19 @@ namespace BenScr.MCC
 
                 GenerateTerrainHeightMapJob heightJob = new GenerateTerrainHeightMapJob
                 {
-                    HeightMap = heightMap,
-                    ChunkSize = CHUNK_SIZE,
-                    ChunkOrigin = new float2(coordinate.x * CHUNK_SIZE, coordinate.z * CHUNK_SIZE),
-                    ContinentLayer = continentLayer,
-                    MountainLayer = mountainLayer,
-                    DetailLayer = detailLayer,
-                    RidgeLayer = ridgeLayer,
-                    FlatlandsHeightMultiplier = TerrainGenerator.instance.flatlandsHeightMultiplier,
-                    MountainHeightMultiplier = TerrainGenerator.instance.mountainHeightMultiplier,
-                    MountainBlendStart = TerrainGenerator.instance.mountainBlendStart,
-                    MountainBlendSharpness = TerrainGenerator.instance.mountainBlendSharpness,
-                    NoiseHeight = TerrainGenerator.instance.noiseHeight,
-                    GroundOffset = TerrainGenerator.instance.groundOffset,
+                    heightMap = heightMap,
+                    chunkSize = CHUNK_SIZE,
+                    chunkOrigin = new float2(coordinate.x * CHUNK_SIZE, coordinate.z * CHUNK_SIZE),
+                    continentLayer = continentLayer,
+                    mountainLayer = mountainLayer,
+                    detailLayer = detailLayer,
+                    ridgeLayer = ridgeLayer,
+                    flatlandsHeightMultiplier = TerrainGenerator.instance.flatlandsHeightMultiplier,
+                    mountainHeightMultiplier = TerrainGenerator.instance.mountainHeightMultiplier,
+                    mountainBlendStart = TerrainGenerator.instance.mountainBlendStart,
+                    mountainBlendSharpness = TerrainGenerator.instance.mountainBlendSharpness,
+                    noiseHeight = TerrainGenerator.instance.noiseHeight,
+                    groundOffset = TerrainGenerator.instance.groundOffset,
                 };
 
                 JobHandle heightHandle = heightJob.Schedule(heightMap.Length, 64);
@@ -161,12 +161,12 @@ namespace BenScr.MCC
 
                 GenerateBlocksJob generateBlocksJob = new GenerateBlocksJob
                 {
-                    Blocks = Blocks,
-                    ChunkSize = CHUNK_SIZE,
-                    ChunkHeight = CHUNK_HEIGHT,
-                    GroundOffset = TerrainGenerator.instance.groundOffset,
-                    HeightMap = heightMap,
-                    ChunkCoordinate = new int3(coordinate.x, coordinate.y, coordinate.z),
+                    blocks = Blocks,
+                    chunkSize = CHUNK_SIZE,
+                    chunkHeight = CHUNK_HEIGHT,
+                    groundOffset = TerrainGenerator.instance.groundOffset,
+                    heightMap = heightMap,
+                    chunkCoordinate = new int3(coordinate.x, coordinate.y, coordinate.z),
                     caveNoise = TerrainGenerator.instance.caveNoise,
                     enableCaves = TerrainGenerator.instance.enableCaves,
                     noiseOffset = TerrainGenerator.instance.noiseOffset,
@@ -230,116 +230,6 @@ namespace BenScr.MCC
             }
         }
 
-        [BurstCompile]
-        public struct GenerateBlocksJob : IJobParallelFor
-        {
-            public NativeArray<byte> Blocks;
-            [ReadOnly] public NativeArray<int> HeightMap;
-            [ReadOnly] public int ChunkSize;
-            [ReadOnly] public int ChunkHeight;
-            [ReadOnly] public int GroundOffset;
-            [ReadOnly] public int3 ChunkCoordinate;
-            [ReadOnly] public bool enableCaves;
-            [ReadOnly] public TerrainGenerator.CaveNoiseSettings caveNoise;
-            [ReadOnly] public float3 caveNoiseRuntimeOffset;
-            [ReadOnly] public float2 noiseOffset;
-            [ReadOnly] public int waterLevel;
-
-            public void Execute(int index)
-            {
-                Pcg32 rng = new Pcg32(0, (ulong)index);
-
-                int x = index % ChunkSize;
-                int t = index / ChunkSize;
-                int y = t % ChunkHeight;
-                int z = t / ChunkHeight;
-
-                int heightMapIndex = z * ChunkSize + x;
-                int groundLevel = HeightMap[heightMapIndex];
-
-                int worldX = ChunkCoordinate.x * ChunkSize + x;
-                int worldY = ChunkCoordinate.y * ChunkHeight + y;
-                int worldZ = ChunkCoordinate.z * ChunkSize + z;
-
-                if (Blocks[index] != BLOCK_AIR)
-                {
-                    return;
-                }
-
-                byte blockId;
-
-                if (worldY > groundLevel)
-                {
-                    int waterLevel = GroundOffset + this.waterLevel;
-                    if (worldY <= waterLevel)
-                    {
-                        blockId = BLOCK_WATER;
-                    }
-                    else
-                        blockId = BLOCK_AIR;
-                }
-                else
-                {
-                    if (worldY == groundLevel)
-                    {
-                        blockId = (byte)(groundLevel >= 30 ? BLOCK_SNOW_GRASS : BLOCK_GRASS);
-                    }
-                    else if (worldY > groundLevel - 5)
-                    {
-                        blockId = BLOCK_DIRT;
-                    }
-                    else
-                    {
-                        blockId = BLOCK_STONE;
-                    }
-
-                    if (blockId != BLOCK_AIR)
-                    {
-                        float3 worldPosition = new float3(worldX, worldY, worldZ);
-                        if (ShouldCarveCave(worldPosition, groundLevel))
-                        {
-                            blockId = BLOCK_AIR;
-                        }
-                    }
-                }
-
-                Blocks[index] = blockId;
-            }
-
-            internal bool ShouldCarveCave(float3 worldPosition, int groundLevel)
-            {
-                if (!enableCaves)
-                    return false;
-
-                if (worldPosition.y >= groundLevel - caveNoise.surfaceClearance)
-                    return false;
-
-                float noiseValue = SampleCaveNoise01(worldPosition);
-                return noiseValue > caveNoise.threshold;
-            }
-
-            internal float SampleCaveNoise01(float3 worldPosition)
-            {
-                float horizontalFrequency = 1f / Mathf.Max(0.0001f, caveNoise.scale);
-                float verticalFrequency = 1f / Mathf.Max(0.0001f, caveNoise.verticalScale);
-
-                float sampleX = worldPosition.x + caveNoise.offset.x + caveNoiseRuntimeOffset.x + noiseOffset.x;
-                float sampleY = worldPosition.y + caveNoise.offset.y + caveNoiseRuntimeOffset.y;
-                float sampleZ = worldPosition.z + caveNoise.offset.z + caveNoiseRuntimeOffset.z + noiseOffset.y;
-
-                float3 sample = new float3(
-                    sampleX * horizontalFrequency,
-                    sampleY * verticalFrequency,
-                    sampleZ * horizontalFrequency
-                );
-
-                float noiseValue = noise.snoise(sample);
-                return noiseValue * 0.5f + 0.5f;
-            }
-        }
-
-
-
         private void AddTree(int x, int y, int z)
         {
             int height = UnityEngine.Random.Range(4, 7);
@@ -376,7 +266,7 @@ namespace BenScr.MCC
             ChunkMeshGenerator.RequestMeshData(BuildHaloBlockArray(), OnMeshDataReceived);
         }
 
-        public byte[,,] BuildHaloBlockArray() // average sw time: 0ms (Code optimized by ChatGPT, from 3ms delay to 0ms)
+        public byte[,,] BuildHaloBlockArray()
         {
             const int SX = CHUNK_SIZE, SY = CHUNK_HEIGHT, SZ = CHUNK_SIZE;
 
@@ -386,7 +276,6 @@ namespace BenScr.MCC
 
             var halo = new byte[SX + 2, SY + 2, SZ + 2];
 
-            // Copy the inner chunk blocks directly.
             for (int x = 0; x < SX; x++)
             {
                 for (int y = 0; y < SY; y++)
@@ -398,7 +287,6 @@ namespace BenScr.MCC
                 }
             }
 
-            // Fetch neighbouring chunks for the six faces.
             Chunk negX = ChunkUtility.GetChunkByCoordinate(new Vector3Int(coordinate.x - 1, coordinate.y, coordinate.z));
             Chunk posX = ChunkUtility.GetChunkByCoordinate(new Vector3Int(coordinate.x + 1, coordinate.y, coordinate.z));
             Chunk negY = ChunkUtility.GetChunkByCoordinate(new Vector3Int(coordinate.x, coordinate.y - 1, coordinate.z));
@@ -518,7 +406,6 @@ namespace BenScr.MCC
             int maxY = SY + 1;
             int maxZ = SZ + 1;
 
-            // Fill remaining edges and corners using the utility method.
             for (int x = 0; x <= maxX; x++)
             {
                 int worldX = originX + x - 1;
@@ -543,14 +430,14 @@ namespace BenScr.MCC
 
             return halo;
         }
-        private void OnMeshDataReceived([ReadOnly] ChunkMeshData meshData) // average sw time: 0 ms
+        private void OnMeshDataReceived([ReadOnly] MeshData meshData)
         {
             if (meshFilter == null) return;
 
-            ChunkMeshSection solidMeshData = meshData.solidMesh;
-            ChunkMeshSection fluidMeshData = meshData.fluidMesh;
+            MeshSection solidMeshData = meshData.solidMesh;
+            MeshSection fluidMeshData = meshData.fluidMesh;
 
-          
+
             Mesh solidMesh = new Mesh();
             bool needs32 = solidMeshData.vertices.Length > short.MaxValue || solidMeshData.triangles.Length > short.MaxValue;
             solidMesh.indexFormat = needs32
@@ -567,7 +454,7 @@ namespace BenScr.MCC
             solidMesh.normals = solidMeshData.normals;
             solidMesh.uv = solidMeshData.uvs;
 
-   
+
             meshFilter.mesh = solidMesh;
 
             if (meshCollider != null)
@@ -594,6 +481,114 @@ namespace BenScr.MCC
         public void SetActive(bool enabled)
         {
             gameObject.SetActive(enabled);
+        }
+
+        [BurstCompile]
+        public struct GenerateBlocksJob : IJobParallelFor
+        {
+            public NativeArray<byte> blocks;
+            [ReadOnly] public NativeArray<int> heightMap;
+            [ReadOnly] public int chunkSize;
+            [ReadOnly] public int chunkHeight;
+            [ReadOnly] public int groundOffset;
+            [ReadOnly] public int3 chunkCoordinate;
+            [ReadOnly] public bool enableCaves;
+            [ReadOnly] public TerrainGenerator.CaveNoiseSettings caveNoise;
+            [ReadOnly] public float3 caveNoiseRuntimeOffset;
+            [ReadOnly] public float2 noiseOffset;
+            [ReadOnly] public int waterLevel;
+
+            public void Execute(int index)
+            {
+                Pcg32 rng = new Pcg32(0, (ulong)index);
+
+                int x = index % chunkSize;
+                int t = index / chunkSize;
+                int y = t % chunkHeight;
+                int z = t / chunkHeight;
+
+                int heightMapIndex = z * chunkSize + x;
+                int groundLevel = heightMap[heightMapIndex];
+
+                int worldX = chunkCoordinate.x * chunkSize + x;
+                int worldY = chunkCoordinate.y * chunkHeight + y;
+                int worldZ = chunkCoordinate.z * chunkSize + z;
+
+                if (blocks[index] != BLOCK_AIR)
+                {
+                    return;
+                }
+
+                byte blockId;
+
+                if (worldY > groundLevel)
+                {
+                    int waterLevel = groundOffset + this.waterLevel;
+                    if (worldY <= waterLevel)
+                    {
+                        blockId = BLOCK_WATER;
+                    }
+                    else
+                        blockId = BLOCK_AIR;
+                }
+                else
+                {
+                    if (worldY == groundLevel)
+                    {
+                        blockId = (byte)(groundLevel >= 30 ? BLOCK_SNOW_GRASS : BLOCK_GRASS);
+                    }
+                    else if (worldY > groundLevel - 5)
+                    {
+                        blockId = BLOCK_DIRT;
+                    }
+                    else
+                    {
+                        blockId = BLOCK_STONE;
+                    }
+
+                    if (blockId != BLOCK_AIR)
+                    {
+                        float3 worldPosition = new float3(worldX, worldY, worldZ);
+                        if (ShouldCarveCave(worldPosition, groundLevel))
+                        {
+                            blockId = BLOCK_AIR;
+                        }
+                    }
+                }
+
+                blocks[index] = blockId;
+            }
+
+            internal bool ShouldCarveCave(float3 worldPosition, int groundLevel)
+            {
+                if (!enableCaves)
+                    return false;
+
+                if (worldPosition.y >= groundLevel - caveNoise.surfaceClearance)
+                    return false;
+
+                float noiseValue = SampleCaveNoise01(worldPosition);
+                return noiseValue > caveNoise.threshold;
+            }
+
+            internal float SampleCaveNoise01(float3 worldPosition)
+            {
+                float horizontalFrequency = 1f / Mathf.Max(0.0001f, caveNoise.scale);
+                float verticalFrequency = 1f / Mathf.Max(0.0001f, caveNoise.verticalScale);
+
+                float sampleX = worldPosition.x + caveNoise.offset.x + caveNoiseRuntimeOffset.x + noiseOffset.x;
+                float sampleY = worldPosition.y + caveNoise.offset.y + caveNoiseRuntimeOffset.y;
+                float sampleZ = worldPosition.z + caveNoise.offset.z + caveNoiseRuntimeOffset.z + noiseOffset.y;
+
+                float3 sample = new float3(
+                    sampleX * horizontalFrequency,
+                    sampleY * verticalFrequency,
+                    sampleZ * horizontalFrequency
+                );
+
+                float noiseValue = noise.snoise(sample);
+                return noiseValue * 0.5f + 0.5f;
+            }
         }
     }
 }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
 
-namespace BenScr.MCC
+namespace BenScr.MinecraftClone
 {
     public class TerrainGenerator : MonoBehaviour
     {
@@ -269,7 +269,8 @@ namespace BenScr.MCC
                 var targetChunk = new Chunk(coordinate.x, coordinate.y, coordinate.z);
                 targetChunk.Prepare();
                 chunks.Add(targetChunk.coordinate, targetChunk);
-                //if(!targetChunk.isGenerated)
+
+                if(!targetChunk.isGenerated)
                 chunksToGenerate.Enqueue(targetChunk.coordinate);
 
                 if (movedEnough) currentActiveChunks.Add(targetChunk.coordinate);
@@ -281,7 +282,7 @@ namespace BenScr.MCC
                 var coordinate = chunksToGenerate.Dequeue();
                 var targetChunk = chunks[coordinate];
 
-                if (!HasAllNeighborChunks(targetChunk.coordinate))
+                if (!ChunkUtility.HasAllNeighborChunks(targetChunk.coordinate))
                 {
                     chunksToGenerate.Enqueue(coordinate);
                     continue;
@@ -312,16 +313,6 @@ namespace BenScr.MCC
             }
 
             lastChunkUpdatePlayerPosition = playerPosition;
-        }
-
-        public bool HasAllNeighborChunks(Vector3Int chunkCoord)
-        {
-            return chunks.ContainsKey(chunkCoord + Vector3Int.right) &&
-                   chunks.ContainsKey(chunkCoord + Vector3Int.left) &&
-                   chunks.ContainsKey(chunkCoord + Vector3Int.forward) &&
-                   chunks.ContainsKey(chunkCoord + Vector3Int.back) &&
-                   chunks.ContainsKey(chunkCoord + Vector3Int.up) &&
-                   chunks.ContainsKey(chunkCoord + Vector3Int.down);
         }
 
         internal bool ShouldCarveCave(float3 worldPosition, int groundLevel)
