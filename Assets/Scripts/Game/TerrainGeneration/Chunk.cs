@@ -46,6 +46,11 @@ namespace BenScr.MinecraftClone
         public MeshRenderer fluidRenderer;
         public MeshFilter fluidFilter;
 
+        public GameObject transparentGameObject;
+        public MeshRenderer transparentRenderer;
+        public MeshFilter transparentFilter;
+        public MeshCollider transparentMeshCollider;
+
         public Vector3Int coordinate;
         public Vector3 position;
 
@@ -60,6 +65,8 @@ namespace BenScr.MinecraftClone
             {
                 meshCollider = gameObject.AddComponent<MeshCollider>();
                 meshCollider.sharedMesh = meshFilter.mesh;
+                transparentMeshCollider = transparentGameObject.AddComponent<MeshCollider>();
+                transparentMeshCollider.sharedMesh = transparentFilter.mesh;
             }
         }
 
@@ -98,7 +105,7 @@ namespace BenScr.MinecraftClone
             isGenerated = true;
         }
 
-        public void Prepare() // average sw time: 0 ms (max 1ms)
+        public void Prepare()
         {
             gameObject = GameObject.Instantiate(TerrainGenerator.instance.chunkPrefab);
             gameObject.name = $"Chunk_{coordinate.x}_{coordinate.y}_{coordinate.z}";
@@ -114,6 +121,11 @@ namespace BenScr.MinecraftClone
             fluidRenderer = fluidGameObject.GetComponent<MeshRenderer>();
             fluidFilter = fluidGameObject.GetComponent<MeshFilter>();
             fluidRenderer.material = AssetsContainer.instance.fluidMaterial;
+
+            transparentGameObject = gameObject.transform.GetChild(1).gameObject;
+            transparentRenderer = transparentGameObject.GetComponent<MeshRenderer>();
+            transparentFilter = transparentGameObject.GetComponent<MeshFilter>();
+            transparentRenderer.material = AssetsContainer.instance.transparentMaterial;
 
             bool isAboveTopChunk = ChunkUtility.GetChunkByCoordinate(coordinate + Vector3Int.down)?.IsTop ?? false;
 
@@ -208,7 +220,7 @@ namespace BenScr.MinecraftClone
                                 {
                                     if (x > 3 && z > 3 && x < CHUNK_SIZE - 3 && z < CHUNK_SIZE - 3)
                                     {
-                                        if (UnityEngine.Random.Range(0, 50) == 0)
+                                        if (UnityEngine.Random.Range(0, 75) == 0)
                                         {
                                             AddTree(x, y + 1, z);
                                         }
@@ -436,38 +448,17 @@ namespace BenScr.MinecraftClone
 
             MeshSection solidMeshData = meshData.solidMesh;
             MeshSection fluidMeshData = meshData.fluidMesh;
+            MeshSection transparentMeshData = meshData.transparentMesh;
 
 
             Mesh solidMesh = new Mesh();
-            bool needs32 = solidMeshData.vertices.Length > short.MaxValue || solidMeshData.triangles.Length > short.MaxValue;
-            solidMesh.indexFormat = needs32
-                ? UnityEngine.Rendering.IndexFormat.UInt32
-                : UnityEngine.Rendering.IndexFormat.UInt16;
-
-            if (solidMesh.indexFormat == UnityEngine.Rendering.IndexFormat.UInt32 && Settings.DebugRendering)
-            {
-                UnityEngine.Debug.LogWarning("Mesh index format set to UInt32 due to large vertex count.");
-            }
 
             solidMesh.vertices = solidMeshData.vertices;
             solidMesh.triangles = solidMeshData.triangles;
             solidMesh.normals = solidMeshData.normals;
             solidMesh.uv = solidMeshData.uvs;
 
-
             meshFilter.mesh = solidMesh;
-
-            if (meshCollider != null)
-            {
-                if (solidMeshData.vertices.Length == 0 || solidMeshData.triangles.Length == 0)
-                {
-                    meshCollider.sharedMesh = null;
-                }
-                else
-                {
-                    meshCollider.sharedMesh = solidMesh;
-                }
-            }
 
             Mesh fluidMesh = new Mesh();
             fluidMesh.vertices = fluidMeshData.vertices;
@@ -476,6 +467,32 @@ namespace BenScr.MinecraftClone
             fluidMesh.uv = fluidMeshData.uvs;
 
             fluidFilter.sharedMesh = fluidMesh;
+
+            Mesh transparentMesh = new Mesh();
+
+            bool needs32 = transparentMeshData.vertices.Length > short.MaxValue || transparentMeshData.triangles.Length > short.MaxValue;
+            transparentMesh.indexFormat = needs32 ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
+
+            transparentMesh.vertices = transparentMeshData.vertices;
+            transparentMesh.triangles = transparentMeshData.triangles;
+            transparentMesh.normals = transparentMeshData.normals;
+            transparentMesh.uv = transparentMeshData.uvs;
+
+            transparentFilter.sharedMesh = transparentMesh;
+
+
+            if (meshCollider != null)
+            {
+                if (solidMeshData.vertices.Length == 0 || solidMeshData.triangles.Length == 0)
+                    meshCollider.sharedMesh = null;
+                else
+                    meshCollider.sharedMesh = solidMesh;
+
+                if (transparentMeshData.vertices.Length == 0 || transparentMeshData.triangles.Length == 0)
+                    transparentMeshCollider.sharedMesh = null;
+                else
+                    transparentMeshCollider.sharedMesh = transparentMesh;
+            }
         }
 
         public void SetActive(bool enabled)

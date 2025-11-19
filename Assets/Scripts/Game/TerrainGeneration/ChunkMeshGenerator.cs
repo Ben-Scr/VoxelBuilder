@@ -48,8 +48,14 @@ namespace BenScr.MinecraftClone
             List<int> fluidTriangles = new List<int>();
             List<Vector2> fluidUvs = new List<Vector2>();
 
+            List<Vector3> transparentVertices = new List<Vector3>();
+            List<Vector3> transparentNormals = new List<Vector3>();
+            List<int> transparentTriangles = new List<int>();
+            List<Vector2> transparentUvs = new List<Vector2>();
+
             int solidVertexIndex = 0;
             int fluidVertexIndex = 0;
+            int leavesVertexIndex = 0;
 
             for (int x = 0; x < Chunk.CHUNK_SIZE; x++)
             {
@@ -64,6 +70,7 @@ namespace BenScr.MinecraftClone
                         {
                             Vector3Int position = new Vector3Int(x, y, z);
                             bool isFluid = block.isFluid;
+                            bool isTransparent = block.isTransparent;
 
                             for (int face = 0; face < 6; face++)
                             {
@@ -79,6 +86,10 @@ namespace BenScr.MinecraftClone
                                     {
                                         AddFace(position, face, block, fluidVertices, fluidNormals, fluidTriangles, fluidUvs, ref fluidVertexIndex);
                                     }
+                                    else if (isTransparent)
+                                    {
+                                        AddFace(position, face, block, transparentVertices, transparentNormals, transparentTriangles, transparentUvs, ref leavesVertexIndex);
+                                    }
                                     else
                                     {
                                         AddFace(position, face, block, solidVertices, solidNormals, solidTriangles, solidUvs, ref solidVertexIndex);
@@ -91,8 +102,9 @@ namespace BenScr.MinecraftClone
             }
 
             return new MeshData(
-                new MeshSection(solidTriangles, solidVertices, solidNormals, solidUvs),
-                new MeshSection(fluidTriangles, fluidVertices, fluidNormals, fluidUvs));
+               new MeshSection(solidTriangles, solidVertices, solidNormals, solidUvs),
+               new MeshSection(fluidTriangles, fluidVertices, fluidNormals, fluidUvs),
+               new MeshSection(transparentTriangles, transparentVertices, transparentNormals, transparentUvs));
         }
 
         private static void AddFace(
@@ -212,11 +224,13 @@ namespace BenScr.MinecraftClone
     {
         public readonly MeshSection solidMesh;
         public readonly MeshSection fluidMesh;
+        public readonly MeshSection transparentMesh;
 
-        public MeshData(MeshSection solidMesh, MeshSection fluidMesh)
+        public MeshData(MeshSection solidMesh, MeshSection fluidMesh, MeshSection transparentMesh)
         {
             this.solidMesh = solidMesh;
             this.fluidMesh = fluidMesh;
+            this.transparentMesh = transparentMesh;
         }
     }
 

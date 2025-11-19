@@ -11,6 +11,8 @@ namespace BenScr.MinecraftClone
         [SerializeField] private int blockTexResolution = 16;
 
         public Material fluidMaterial;
+        public Material transparentMaterial;
+
 
         public static AssetsContainer instance;
 
