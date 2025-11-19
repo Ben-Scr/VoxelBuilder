@@ -17,10 +17,10 @@ A lightweight Minecraft Clone made with Unity and C#, featuring cubic chunk gene
 
 ## Gameplay Screenshots
 <p align="center">
-  <img src="Docs/Screenshot4.png" width="45%" alt="Gameplay Screenshot 1">
-  <img src="Docs/Screenshot5.png" width="45%" alt="Gameplay Screenshot 2">
-  <img src="Docs/Screenshot3.png" width="45%" alt="Gameplay Screenshot 3">
-  <img src="Docs/Screenshot6.png" width="45%" alt="Gameplay Screenshot 4">
+  <img src="Docs/Screenshot4.jpg" width="45%" alt="Gameplay Screenshot 1">
+  <img src="Docs/Screenshot5.jpg" width="45%" alt="Gameplay Screenshot 2">
+  <img src="Docs/Screenshot3.jpg" width="45%" alt="Gameplay Screenshot 3">
+  <img src="Docs/Screenshot6.jpg" width="45%" alt="Gameplay Screenshot 4">
 </p>
 
 ## Credits
