@@ -12,6 +12,8 @@ namespace BenScr.MinecraftClone
         public bool isTransparent;
         public bool isFluid;
 
+        public Sprite preview;
+
         public int backTexture;
         public int frontTexture;
         public int topTexture;

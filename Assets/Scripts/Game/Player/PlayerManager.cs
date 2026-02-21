@@ -1,4 +1,6 @@
+using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace BenScr.MinecraftClone
 {
@@ -11,6 +13,7 @@ namespace BenScr.MinecraftClone
         [SerializeField] private float breakBlockCooldown = 0.1f;
         [SerializeField] private float placeBlockCooldown = 0.1f;
         [SerializeField] private Block selectedBlock;
+        [SerializeField] private Image selectedBlockPreview;
 
         private Vector3 highlightPosition;
         private Vector3 placeBlockPosition;
@@ -18,6 +21,11 @@ namespace BenScr.MinecraftClone
 
         private float breakBlockTimer = 0f;
         private float placeBlockTimer = 0f;
+
+        private void Awake()
+        {
+            selectedBlockPreview.sprite = selectedBlock.preview;
+        }
 
         void Update()
         {
@@ -32,6 +40,19 @@ namespace BenScr.MinecraftClone
 
             breakBlockTimer += Time.deltaTime;
             placeBlockTimer += Time.deltaTime;
+
+            if (Input.mouseScrollDelta.y >= 1)
+            {
+                int blocksCount = AssetsContainer.instance.blocks.Length;
+                selectedBlock = AssetsContainer.GetBlock(math.clamp((selectedBlock.id + 1) % blocksCount, 1, blocksCount - 1));
+                selectedBlockPreview.sprite = selectedBlock.preview;
+            }
+            else if (Input.mouseScrollDelta.y == -1)
+            {
+                int blocksCount = AssetsContainer.instance.blocks.Length;
+                selectedBlock = AssetsContainer.GetBlock(math.clamp((selectedBlock.id - 1 + (blocksCount - 1)) % blocksCount, 1, blocksCount - 1));
+                selectedBlockPreview.sprite = selectedBlock.preview;
+            }
 
             if (isHighlightBlockVisible)
             {
@@ -85,9 +106,9 @@ namespace BenScr.MinecraftClone
                         Chunk chunk = ChunkUtility.GetChunkByPosition(highlightPosition);
                         Debug.Log("Highlighted block: " + AssetsContainer.GetBlock(blockID).name);
                         Debug.Log("In Chunk at position " + chunk.coordinate + " AirOnly:" + chunk.isAirOnly
-                            + " HighestGroundlevel:" + chunk.highestGroundLevel + " LowestGroundlevel:" 
+                            + " HighestGroundlevel:" + chunk.highestGroundLevel + " LowestGroundlevel:"
                             + chunk.lowestGroundLevel + " IsTop:" + chunk.IsTop
-                            + " IsGenerated:"+ chunk.isGenerated);
+                            + " IsGenerated:" + chunk.isGenerated);
                     }
 
                     highlightBlock.transform.position = highlightPosition + new Vector3(0.5f, 0.5f, 0.5f);
