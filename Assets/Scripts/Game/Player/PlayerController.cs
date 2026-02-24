@@ -50,13 +50,14 @@ namespace BenScr.MinecraftClone
         [SerializeField] private float swimLerpSpeed = 5f;
         [SerializeField] private float swimDrag = 3f;
         [SerializeField] private float swimAngularDrag = 1.5f;
+
+        [SerializeField] private float gravity;
         private UnderwaterPostEffect underwaterEffect;
         internal bool isHeadInFluid;
         private bool isInFluid;
         internal Block currentFluidBlock;
         private float defaultDrag;
         private float defaultAngularDrag;
-
 
         private Rigidbody rb;
         private CapsuleCollider capsuleCollider;
@@ -136,6 +137,12 @@ namespace BenScr.MinecraftClone
         private void Movement()
         {
             Vector3 input = GetInput();
+
+
+            if (!isGrounded)
+            {
+                rb.linearVelocity = new Vector2(rb.linearVelocity.x, rb.linearVelocity.y - gravity * Time.deltaTime);
+            }
 
             if (!isSpectator)
             {

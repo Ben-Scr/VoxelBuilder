@@ -105,6 +105,8 @@ namespace BenScr.MinecraftClone
         [SerializeField] private int maxChunksCreatePerFrame = 2;
         [SerializeField] private int maxChunksGeneratePerFrame = 2;
         [SerializeField] private float addColliderDistance = 10f;
+        [SerializeField] private PlayerController player;
+        public static Action OnLoadedTerrain;
 
         public static TerrainGenerator instance;
         private Vector3Int[] poses;
@@ -119,7 +121,8 @@ namespace BenScr.MinecraftClone
         Vector2 mountainNoiseRuntimeOffset;
         Vector2 detailNoiseRuntimeOffset;
         Vector2 ridgeNoiseRuntimeOffset;
-       internal Vector3 caveNoiseRuntimeOffset;
+        internal Vector3 caveNoiseRuntimeOffset;
+        private bool loadedTerrain;
 
         private void Awake()
         {
@@ -168,7 +171,7 @@ namespace BenScr.MinecraftClone
 
             foreach (Vector3Int chunkCoord in lastActiveChunks)
             {
-                Vector3 playerPosition = PlayerController.instance.transform.position;
+                Vector3 playerPosition = player.transform.position;
                 Vector3Int playerChunk = ChunkUtility.GetChunkCoordinateFromPosition(playerPosition);
 
                 bool visible = (playerChunk.x - chunkCoord.x) * (playerChunk.x - chunkCoord.x)
@@ -216,12 +219,12 @@ namespace BenScr.MinecraftClone
                 UpdateViewDistance();
 
             ChunkMeshGenerator.Update();
-            UpdateChunks(PlayerController.instance.transform.position);
+            UpdateChunks(player.transform.position);
         }
 
 
         public void UpdateChunks(Vector3 playerPosition)
-        { 
+        {
             bool movedEnough = (playerPosition - lastChunkUpdatePlayerPosition).sqrMagnitude >= chunkUpdateThresholdSq;
 
             if (!movedEnough && chunksToCreate.Count == 0 && chunksToGenerate.Count == 0)
@@ -270,8 +273,8 @@ namespace BenScr.MinecraftClone
                 targetChunk.Prepare();
                 chunks.Add(targetChunk.coordinate, targetChunk);
 
-                if(!targetChunk.isGenerated)
-                chunksToGenerate.Enqueue(targetChunk.coordinate);
+                if (!targetChunk.isGenerated)
+                    chunksToGenerate.Enqueue(targetChunk.coordinate);
 
                 if (movedEnough) currentActiveChunks.Add(targetChunk.coordinate);
             }
@@ -313,6 +316,13 @@ namespace BenScr.MinecraftClone
             }
 
             lastChunkUpdatePlayerPosition = playerPosition;
+
+
+            if (!loadedTerrain && chunksToCreate.Count == 0)
+            {
+                loadedTerrain = true;
+                OnLoadedTerrain?.Invoke();
+            }
         }
 
         internal bool ShouldCarveCave(float3 worldPosition, int groundLevel)
