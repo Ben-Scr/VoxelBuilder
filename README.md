@@ -13,6 +13,7 @@ A lightweight Minecraft Clone made with Unity and C#, featuring cubic chunk gene
 - Place Block: Right Mouse Button (0.1s interval)
 - Destroy Block: Left Mouse Button (0.1s interval)
 - Fly: Double-Tap `Space` (0.2s interval)
+- Scroll Wheel: Change Selected Block
 - Toggle Spectator Mode: `F1`
 
 ## Gameplay Screenshots
