@@ -26,3 +26,4 @@ A lightweight Minecraft Clone made with Unity and C#, featuring cubic chunk gene
 
 ## Credits
 - Texture Pack: https://www.planetminecraft.com/texture-pack/echonilla-smooth-vanilla-32x/
+- Download the game here: [▶️ Itch.io](https://rainixx.itch.io/voxel-builder)
