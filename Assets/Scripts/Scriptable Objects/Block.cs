@@ -11,8 +11,10 @@ namespace BenScr.MinecraftClone
         public int durability;
         public bool isTransparent;
         public bool isFluid;
+        public int health = 5;
 
         public Sprite preview;
+        public GameObject destroyEffect;
 
         public int backTexture;
         public int frontTexture;

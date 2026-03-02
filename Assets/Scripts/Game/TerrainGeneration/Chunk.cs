@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using Unity.Burst;
@@ -6,10 +7,44 @@ using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.UIElements;
 using static BenScr.MinecraftClone.SettingsContainer;
 
 namespace BenScr.MinecraftClone
 {
+    public struct ByteVector3
+    {
+        public byte x;
+        public byte y;
+        public byte z;
+
+        public ByteVector3(byte x, byte y, byte z)
+        {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
+
+        public bool Equals(ByteVector3 other) => x == other.x && y == other.y && z == other.z;
+        public override bool Equals(object obj) => obj is ByteVector3 other && Equals(other);
+
+        public override int GetHashCode()
+            => x | (y << 8) | (z << 16);
+    }
+
+    public class DamagedBlock
+    {
+        public int health;
+        public GameObject damageStage;
+
+        public  DamagedBlock(int health, GameObject damageStage)
+        {
+            this.health = health;
+            this.damageStage = damageStage;
+        }
+    }
+
+
     public class Chunk
     {
         public const int CHUNK_SIZE = 32;
@@ -54,6 +89,8 @@ namespace BenScr.MinecraftClone
         public Vector3Int coordinate;
         public Vector3 position;
 
+        public Dictionary<ByteVector3, DamagedBlock> damagedBlocks = new();
+
         public Chunk(int x, int y, int z)
         {
             coordinate = new Vector3Int(x, y, z);
@@ -70,12 +107,24 @@ namespace BenScr.MinecraftClone
             }
         }
 
-        public void SetBlock(Vector3 position, int blockId, bool update = true)
+        public Block GetBlock(Vector3 localPosition)
         {
             Vector3Int blockPosition = new Vector3Int(
-                        Mathf.FloorToInt(position.x),
-                        Mathf.FloorToInt(position.y),
-                        Mathf.FloorToInt(position.z)
+                      Mathf.FloorToInt(localPosition.x),
+                      Mathf.FloorToInt(localPosition.y),
+                      Mathf.FloorToInt(localPosition.z)
+
+              );
+
+            return AssetsContainer.GetBlock(blocks[blockPosition.x, blockPosition.y, blockPosition.z]);
+        }
+
+        public void SetBlock(Vector3 localPosition, int blockId, bool update = true)
+        {
+            Vector3Int blockPosition = new Vector3Int(
+                        Mathf.FloorToInt(localPosition.x),
+                        Mathf.FloorToInt(localPosition.y),
+                        Mathf.FloorToInt(localPosition.z)
                 );
 
             if (ChunkUtility.IsInsideChunk(blockPosition))

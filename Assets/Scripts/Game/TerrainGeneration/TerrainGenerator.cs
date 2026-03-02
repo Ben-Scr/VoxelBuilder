@@ -78,6 +78,7 @@ namespace BenScr.MinecraftClone
         [Range(0f, 1f)] public float mountainBlendStart = 0.55f;
         [Range(0.1f, 4f)] public float mountainBlendSharpness = 2f;
 
+        public GameObject damageStagePrefab;
         public GameObject chunkPrefab;
         [SerializeField] private int seed = 0;
         public bool addColliders = false;
@@ -390,6 +391,76 @@ namespace BenScr.MinecraftClone
             else
             {
                 Debug.LogWarning("Position is outside of world: " + position);
+            }
+        }
+
+        public void DamageBlock(Vector3 position)
+        {
+            Chunk chunk = ChunkUtility.GetChunkByPosition(position);
+
+            Vector3 localPosition = position - chunk.position;
+            Block hitBlock = chunk.GetBlock(localPosition);
+
+            ByteVector3 key = new ByteVector3((byte)localPosition.x, (byte)localPosition.y, (byte)localPosition.z);
+
+            bool destroyed = false;
+
+            if (!chunk.damagedBlocks.ContainsKey(key))
+            {
+                if (hitBlock.health <= 1)
+                {
+                    destroyed = true;
+                    chunk.SetBlock(localPosition, Chunk.BLOCK_AIR, true);
+                }
+                else
+                {
+                    GameObject obj = Instantiate(damageStagePrefab, position + new Vector3(0.5f, 0.5f, 0.5f), Quaternion.identity);
+                    DamagedBlock damagedBlock = new DamagedBlock(hitBlock.health - 1, obj);
+                    chunk.damagedBlocks.Add(key, damagedBlock);
+
+                    int maxHealth = hitBlock.health;
+                    int stagesLength = AssetsContainer.instance.damageStages.Length;
+
+                    int health = Math.Clamp(damagedBlock.health, 0, maxHealth);
+                    int damage = maxHealth - health;
+
+                    int stageIndex = (damage * stagesLength) / (maxHealth + 1);
+                    stageIndex = Math.Clamp(stageIndex, 0, stagesLength - 1);
+
+                    obj.GetComponent<MeshRenderer>().material.mainTexture = AssetsContainer.instance.damageStages[stageIndex].texture;
+                }
+            }
+            else
+            {
+                DamagedBlock damagedBlock = chunk.damagedBlocks[key];
+                --damagedBlock.health;
+
+                if (damagedBlock.health <= 0)
+                {
+                    chunk.SetBlock(localPosition, Chunk.BLOCK_AIR, true);
+                    Destroy(damagedBlock.damageStage);
+                    chunk.damagedBlocks.Remove(key);
+                    destroyed = true;
+                }
+                else
+                {
+                    int maxHealth = hitBlock.health;
+                    int stagesLength = AssetsContainer.instance.damageStages.Length;
+
+                    int health = Math.Clamp(damagedBlock.health, 0, maxHealth);
+                    int damage = maxHealth - health;            
+
+                    int stageIndex = (damage * stagesLength) / (maxHealth + 1);
+                    stageIndex = Math.Clamp(stageIndex, 0, stagesLength - 1);
+
+
+                    damagedBlock.damageStage.GetComponent<MeshRenderer>().material.mainTexture = AssetsContainer.instance.damageStages[stageIndex].texture;
+                }
+            }
+
+            if (destroyed && hitBlock.destroyEffect)
+            {
+                Destroy(Instantiate(hitBlock.destroyEffect, position + new Vector3(0.5f, 0.5f, 0.5f), Quaternion.identity), 1.0f);
             }
         }
     }

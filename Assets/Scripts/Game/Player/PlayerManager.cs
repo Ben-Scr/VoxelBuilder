@@ -41,11 +41,14 @@ namespace BenScr.MinecraftClone
 
             if (isHighlightBlockVisible)
             {
-                if (Input.GetMouseButton(0) && breakBlockTimer > breakBlockCooldown)
+                if ((PlayerController.instance.isFlying ? Input.GetMouseButton(0) : Input.GetMouseButtonDown(0)) && breakBlockTimer > breakBlockCooldown)
                 {
                     breakBlockTimer = 0f;
 
+                    if(PlayerController.instance.isFlying)
                     TerrainGenerator.instance.SetBlock(highlightPosition, Chunk.BLOCK_AIR);
+                    else
+                        TerrainGenerator.instance.DamageBlock(highlightPosition);
                 }
 
                 if (Input.GetMouseButton(1) && placeBlockTimer > placeBlockCooldown)

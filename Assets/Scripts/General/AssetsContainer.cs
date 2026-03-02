@@ -9,6 +9,7 @@ namespace BenScr.MinecraftClone
 
         public Material blockMaterial;
         [SerializeField] private int blockTexResolution = 16;
+        public Sprite[] damageStages;
 
         public Material fluidMaterial;
         public Material transparentMaterial;

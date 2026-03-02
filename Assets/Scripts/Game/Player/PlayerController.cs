@@ -34,7 +34,7 @@ namespace BenScr.MinecraftClone
         [SerializeField] private float flyAcceleration = 5f;
 
         private float curFlySpeedMultiplier = 1;
-        private bool isFlying => movementMode == MovementMode.Flying;
+        public bool isFlying => movementMode == MovementMode.Flying;
 
 
         [Header("Physics")]
