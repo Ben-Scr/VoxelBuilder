@@ -14,7 +14,7 @@ OcclusionCullingSettings:
 RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 10
-  m_Fog: 0
+  m_Fog: 1
   m_FogColor: {r: 0.7137255, g: 0.6156863, b: 0.69803923, a: 1}
   m_FogMode: 3
   m_FogDensity: 0.005
@@ -528,7 +528,7 @@ Transform:
   m_GameObject: {fileID: 603069886}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 50, z: 0}
+  m_LocalPosition: {x: 0, y: 100, z: 0}
   m_LocalScale: {x: 0.5, y: 1.9, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1690,7 +1690,7 @@ MonoBehaviour:
   seed: 0
   addColliders: 1
   addTrees: 0
-  viewDistance: 10
+  viewDistance: 2
   viewDistanceY: 3
   noiseScale: 220
   noiseHeight: 1000
@@ -1698,8 +1698,8 @@ MonoBehaviour:
   groundOffset: -66
   chunkUpdateThreshold: 0
   shouldDisableChunks: 1
-  maxChunksCreatePerFrame: 15
-  maxChunksGeneratePerFrame: 15
+  maxChunksCreatePerFrame: 4
+  maxChunksGeneratePerFrame: 4
   addColliderDistance: 64
   player: {fileID: 641790152}
 --- !u!4 &1239169615

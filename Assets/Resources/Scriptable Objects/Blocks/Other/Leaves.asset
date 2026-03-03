@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d6643304ec9e5f042898ecbe8f2c137b, type: 3}
   m_Name: Leaves
   m_EditorClassIdentifier: Assembly-CSharp::Block
-  durability: 5
+  durability: 1
   isTransparent: 1
   isFluid: 0
   preview: {fileID: -1101336222, guid: 5335917e6daf04640a6505b8f6b432c8, type: 3}
-  destroyEffect: {fileID: 0}
+  destroyEffect: {fileID: 7981987944914651597, guid: 7b00b7caaab667d42a269b4f4a268c6d, type: 3}
   backTexture: 12
   frontTexture: 12
   topTexture: 12

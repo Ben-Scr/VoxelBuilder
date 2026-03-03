@@ -26,6 +26,11 @@ namespace BenScr.CubeDash
         public static SceneType activeScene = SceneType.Persistent;
         public static SceneType lastActiveScene = SceneType.Persistent;
 
+        private void Awake()
+        {
+            OnInit();
+        }
+
         private void OnInit()
         {
             if (!IsSceneLoaded(MENU_SCENE))
