@@ -73,8 +73,8 @@ namespace BenScr.MinecraftClone
         };
 
         [Header("Terrain Noise Blending")]
-        [Range(0.1f, 3f)] public float flatlandsHeightMultiplier = 0.65f;
-        [Range(0.5f, 5f)] public float mountainHeightMultiplier = 2.5f;
+        [Range(0.1f, 100f)] public float flatlandsHeightMultiplier = 0.65f;
+        [Range(0.5f, 100f)] public float mountainHeightMultiplier = 2.5f;
         [Range(0f, 1f)] public float mountainBlendStart = 0.55f;
         [Range(0.1f, 4f)] public float mountainBlendSharpness = 2f;
 
