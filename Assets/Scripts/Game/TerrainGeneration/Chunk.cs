@@ -107,7 +107,7 @@ namespace BenScr.MinecraftClone
             }
         }
 
-        public Block GetBlock(Vector3 localPosition)
+        public BlockData GetBlock(Vector3 localPosition)
         {
             Vector3Int blockPosition = new Vector3Int(
                       Mathf.FloorToInt(localPosition.x),

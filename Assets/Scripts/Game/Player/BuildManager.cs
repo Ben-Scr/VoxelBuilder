@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 namespace BenScr.MinecraftClone
 {
-    public class PlayerManager : MonoBehaviour
+    public class BuildManager : MonoBehaviour
     {
         private static readonly Vector3 halfExtents = new Vector3(0.499f, 0.499f, 0.499f);
 
@@ -27,6 +27,8 @@ namespace BenScr.MinecraftClone
 
         void Update()
         {
+            if (!PlayerController.instance) return;
+
             if (PlayerController.instance.isSpectator)
             {
                 breakBlockTimer = 0;

@@ -64,7 +64,7 @@ namespace BenScr.MinecraftClone
                     for (int z = 0; z < Chunk.CHUNK_SIZE; z++)
                     {
                         int blockId = haloBlocks[x + 1, y + 1, z + 1];
-                        Block block = GetBlock(blockId);
+                        BlockData block = GetBlock(blockId);
 
                         if (blockId != Chunk.BLOCK_AIR)
                         {
@@ -75,7 +75,7 @@ namespace BenScr.MinecraftClone
                             for (int face = 0; face < 6; face++)
                             {
                                 int neighborBlockId = GetHalo(haloBlocks, position + cubeNormals[face]);
-                                Block neighbourBlock = GetBlock(neighborBlockId);
+                                BlockData neighbourBlock = GetBlock(neighborBlockId);
 
                                 bool neighbourIsTransparent = neighbourBlock.isTransparent;
                                 bool hidesFaceBecauseSameFluid = block.isFluid && neighbourBlock.id == block.id;
@@ -110,7 +110,7 @@ namespace BenScr.MinecraftClone
         private static void AddFace(
            Vector3Int position,
            int face,
-           Block block,
+           BlockData block,
            List<Vector3> vertices,
            List<Vector3> normals,
            List<int> triangles,

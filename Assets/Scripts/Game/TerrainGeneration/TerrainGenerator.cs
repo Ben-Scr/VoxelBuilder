@@ -399,7 +399,7 @@ namespace BenScr.MinecraftClone
             Chunk chunk = ChunkUtility.GetChunkByPosition(position);
 
             Vector3 localPosition = position - chunk.position;
-            Block hitBlock = chunk.GetBlock(localPosition);
+            BlockData hitBlock = chunk.GetBlock(localPosition);
 
             ByteVector3 key = new ByteVector3((byte)localPosition.x, (byte)localPosition.y, (byte)localPosition.z);
 
@@ -407,7 +407,7 @@ namespace BenScr.MinecraftClone
 
             if (!chunk.damagedBlocks.ContainsKey(key))
             {
-                if (hitBlock.health <= 1)
+                if (hitBlock.durability <= 1)
                 {
                     destroyed = true;
                     chunk.SetBlock(localPosition, Chunk.BLOCK_AIR, true);
@@ -415,10 +415,10 @@ namespace BenScr.MinecraftClone
                 else
                 {
                     GameObject obj = Instantiate(damageStagePrefab, position + new Vector3(0.5f, 0.5f, 0.5f), Quaternion.identity);
-                    DamagedBlock damagedBlock = new DamagedBlock(hitBlock.health - 1, obj);
+                    DamagedBlock damagedBlock = new DamagedBlock(hitBlock.durability - 1, obj);
                     chunk.damagedBlocks.Add(key, damagedBlock);
 
-                    int maxHealth = hitBlock.health;
+                    int maxHealth = hitBlock.durability;
                     int stagesLength = AssetsContainer.instance.damageStages.Length;
 
                     int health = Math.Clamp(damagedBlock.health, 0, maxHealth);
@@ -444,7 +444,7 @@ namespace BenScr.MinecraftClone
                 }
                 else
                 {
-                    int maxHealth = hitBlock.health;
+                    int maxHealth = hitBlock.durability;
                     int stagesLength = AssetsContainer.instance.damageStages.Length;
 
                     int health = Math.Clamp(damagedBlock.health, 0, maxHealth);

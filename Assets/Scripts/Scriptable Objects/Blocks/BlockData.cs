@@ -4,14 +4,13 @@ using UnityEngine;
 namespace BenScr.MinecraftClone
 {
 
-    [CreateAssetMenu(fileName = "Block", menuName = "Scriptable Objects/Blocks/Block")]
-    public class Block : ScriptableObject
+    [CreateAssetMenu(fileName = "BlockData", menuName = "Scriptable Objects/Blocks/Block")]
+    public class BlockData : ScriptableObject
     {
         internal ushort id;
-        public int durability;
+        public int durability = 5;
         public bool isTransparent;
         public bool isFluid;
-        public int health = 5;
 
         public Sprite preview;
         public GameObject destroyEffect;

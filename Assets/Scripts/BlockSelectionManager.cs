@@ -8,7 +8,7 @@ namespace BenScr.MinecraftClone
 {
     public class BlockSelectionManager : MonoBehaviour
     {
-        public Block selectedBlock;
+        public BlockData selectedBlock;
 
         [SerializeField] private Image prevSelectedBlockPreview;
         [SerializeField] private Image selectedBlockPreview;
@@ -67,7 +67,7 @@ namespace BenScr.MinecraftClone
             action();
         }
 
-        private Block GetPrevBlock(int backward = 1)
+        private BlockData GetPrevBlock(int backward = 1)
         {
             int blocksCount = AssetsContainer.instance.blocks.Length;
 
@@ -79,7 +79,7 @@ namespace BenScr.MinecraftClone
 
             return AssetsContainer.GetBlock(id);
         }
-        private Block GetNextBlock(int forward = 1)
+        private BlockData GetNextBlock(int forward = 1)
         {
             int blocksCount = AssetsContainer.instance.blocks.Length;
             return AssetsContainer.GetBlock(math.clamp((selectedBlock.id + forward) % blocksCount, 1, blocksCount - 1));

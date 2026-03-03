@@ -5,7 +5,7 @@ namespace BenScr.MinecraftClone
 {
     public class AssetsContainer : MonoBehaviour
     {
-        public Block[] blocks;
+        public BlockData[] blocks;
 
         public Material blockMaterial;
         [SerializeField] private int blockTexResolution = 16;
@@ -84,7 +84,7 @@ namespace BenScr.MinecraftClone
             }
         }
 
-        public static Block GetBlock(int id)
+        public static BlockData GetBlock(int id)
         {
             if (id < 0 || id >= instance.blocks.Length)
             {

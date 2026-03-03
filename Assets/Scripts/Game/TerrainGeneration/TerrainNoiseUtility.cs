@@ -1,160 +1,171 @@
-﻿using Unity.Mathematics;
+﻿using Unity.Burst;
+using Unity.Mathematics;
 
 namespace BenScr.MinecraftClone
 {
     public static class TerrainNoiseUtility
     {
+        // --- Public API ---------------------------------------------------------
+
+        /// <summary>
+        /// Returns a deterministic normalized height in [0..1], built from a
+        /// Minecraft-like "base + mountains + detail + ridges" composition.
+        /// Burst-friendly (no allocations, pure math).
+        /// Requires Unity.Mathematics.noise (Simplex).
+        /// </summary>
+        [BurstCompile]
         public static float SampleNormalizedHeight(
-                    float2 worldPosition,
-                    NoiseLayer continentLayer,
-                    NoiseLayer mountainLayer,
-                    NoiseLayer detailLayer,
-                    NoiseLayer ridgeLayer,
-                    float flatlandsHeightMultiplier,
-                    float mountainHeightMultiplier,
-                    float mountainBlendStart,
-                    float mountainBlendSharpness)
+            float2 worldPosition,
+            NoiseLayer continentLayer,
+            NoiseLayer mountainLayer,
+            NoiseLayer detailLayer,
+            NoiseLayer ridgeLayer,
+            float flatlandsHeightMultiplier,
+            float mountainHeightMultiplier,
+            float mountainBlendStart,
+            float mountainBlendSharpness)
         {
-            float2 warpedPosition = ApplyDomainWarp(worldPosition, detailLayer, ridgeLayer);
-            float2 macroWarpedPosition = ApplyMacroWarp(worldPosition, continentLayer, detailLayer);
+            // 1) Continentalness: big-scale landmass distribution (mostly smooth)
+            //    Use low octave count, low lacunarity persistence -> broad shapes.
+            float cont = Fbm01(worldPosition, continentLayer, octaves: 4, lacunarity: 2.0f, gain: 0.5f);
+            cont = Redistribute01(cont, continentLayer.redistribution);
 
-            float continentValue = SampleFractalLayer(macroWarpedPosition, continentLayer, 5, 2f, 0.5f);
-            float continentErosion = SampleFractalLayer(warpedPosition, detailLayer, 2, 2.6f, 0.5f) * 0.1f;
-            continentValue = math.saturate(continentValue - continentErosion);
+            // 2) Mountain/erosion-like field: medium scale, used to decide where mountains can appear
+            float mtn = Fbm01(worldPosition, mountainLayer, octaves: 5, lacunarity: 2.1f, gain: 0.52f);
+            mtn = Redistribute01(mtn, mountainLayer.redistribution);
 
-            float baseMountain = SampleFractalLayer(warpedPosition, mountainLayer, 5, 2.1f, 0.48f);
-            float peakMountain = SampleFractalLayer(warpedPosition * 1.85f, mountainLayer, 3, 2.35f, 0.45f);
-            float ridgeValue = SampleRidgedFractalLayer(warpedPosition, ridgeLayer, 4, 2f, 0.5f);
-            float detailValue = SampleFractalLayer(warpedPosition, detailLayer, 4, 2.35f, 0.45f);
+            // 3) Ridge/peaks: ridged multifractal-ish (sharp crests)
+            float rid = Ridged01(worldPosition, ridgeLayer, octaves: 4, lacunarity: 2.05f, gain: 0.5f);
+            rid = Redistribute01(rid, ridgeLayer.redistribution);
 
-            float blendRange = math.max(0.05f, 0.35f / math.max(0.1f, mountainBlendSharpness));
-            float mountainMask = math.smoothstep(mountainBlendStart, mountainBlendStart + blendRange, continentValue);
-            float plainsMask = math.saturate(1f - mountainMask);
+            // 4) Detail: small-scale surface variation (micro noise)
+            float det = Fbm01(worldPosition, detailLayer, octaves: 6, lacunarity: 2.2f, gain: 0.48f);
+            det = Redistribute01(det, detailLayer.redistribution);
 
-            // Minecraft-like varied lowlands: broad continental undulation + rolling hills + local roughness.
-            float continentalness = continentValue * 2f - 1f;
+            // --- Mountain blending mask -----------------------------------------
+            // Use continentalness as the primary "biome" driver, then modulate by mountain field.
+            // This mimics the idea of Minecraft's broad selectors feeding more complex shaping.
+            float baseMask = math.saturate((cont - mountainBlendStart) * mountainBlendSharpness);
+            baseMask = Smooth01(baseMask);                    // soften edges
+            float mtnMask = math.saturate(baseMask * math.lerp(0.35f, 1.0f, mtn)); // let mountain noise influence where peaks show up
 
-            float broadLowlandNoise = SampleFractalLayer(macroWarpedPosition * 0.58f, continentLayer, 3, 1.95f, 0.55f);
-            broadLowlandNoise = (broadLowlandNoise * 2f - 1f) * 0.28f;
+            // --- Compose height --------------------------------------------------
+            // Base terrain (flatlands / rolling hills):
+            float baseHeight = cont * flatlandsHeightMultiplier;
 
-            float rollingHills = SampleFractalLayer(macroWarpedPosition * 1.05f, detailLayer, 4, 2f, 0.56f);
-            rollingHills = (rollingHills * 2f - 1f) * 0.24f;
+            // Mountains: combine "mountain field" + ridges for peaks.
+            // Keep ridges contributing mostly where mountains exist.
+            float mountainShape = (0.65f * mtn + 0.35f * rid);
+            mountainShape = Smooth01(mountainShape);
 
-            float hummockNoise = SampleFractalLayer(warpedPosition * 1.45f, detailLayer, 5, 2.45f, 0.47f);
-            hummockNoise = (hummockNoise * 2f - 1f) * 0.08f;
+            float mountainHeight = mountainShape * mountainHeightMultiplier * mtnMask;
 
-            float vegetationNoise = SampleFractalLayer(macroWarpedPosition * 0.9f, ridgeLayer, 3, 2.15f, 0.52f);
-            float vegetationMask = math.smoothstep(0.32f, 0.82f, vegetationNoise);
-            float biomeModulation = math.lerp(-0.05f, 0.12f, vegetationMask);
+            // Detail: add subtle variation everywhere, more in mountains.
+            float detailAmount = math.lerp(0.06f, 0.14f, mtnMask);
+            float detailHeight = (det - 0.5f) * 2.0f;         // [-1..1]
+            detailHeight *= detailAmount;
 
-            // Foothills avoid giant flat regions between plains and mountains.
-            float foothillMask = math.smoothstep(mountainBlendStart - 0.23f, mountainBlendStart + 0.04f, continentValue) * plainsMask;
-            float foothills = (baseMountain * 0.4f + ridgeValue * 0.35f) * foothillMask * 0.5f;
+            // Final unnormalized height
+            float h = baseHeight + mountainHeight + detailHeight;
 
-            // Small river channels in lowlands.
-            float riverNoise = math.abs(noise.snoise((macroWarpedPosition + new float2(901.6f, 173.2f)) * math.max(continentLayer.frequency * 3.1f, 0.0001f)));
-            float riverMask = 1f - math.smoothstep(0.08f, 0.19f, riverNoise);
-            float riverCarving = riverMask * plainsMask * math.smoothstep(0.16f, 0.72f, continentValue) * 0.2f;
+            // --- Normalize to [0..1] --------------------------------------------
+            // We estimate a plausible min/max based on multipliers to keep output stable and predictable.
+            // This avoids "hard-coded magic" while remaining deterministic.
+            float estimatedMin = -0.20f; // small headroom for detail pushing below base
+            float estimatedMax = flatlandsHeightMultiplier + mountainHeightMultiplier + 0.20f;
 
-            float flatlandBase = 0.42f + continentalness * 0.22f;
-            float flatlandDetail = broadLowlandNoise + rollingHills + hummockNoise + biomeModulation + foothills;
-            float flatlands = math.max(0f, flatlandBase + flatlandDetail - riverCarving) * flatlandsHeightMultiplier;
+            float h01 = math.unlerp(estimatedMin, estimatedMax, h);
+            h01 = math.saturate(h01);
 
-            float mountainShape = math.saturate(baseMountain * 0.62f + peakMountain * 0.62f + ridgeValue * 0.85f);
-            float mountainHeight = math.pow(mountainShape, 1.03f) * mountainHeightMultiplier;
+            // Optional final shaping: a gentle contrast curve that resembles MC’s “less flat mid-range”.
+            h01 = Contrast01(h01, 1.10f);
 
-            float blended = math.lerp(flatlands, mountainHeight, mountainMask);
-
-            float valleyCarving = (1f - ridgeValue) * 0.16f * mountainMask;
-            blended -= valleyCarving;
-
-            float inlandMask = math.smoothstep(0.22f, 0.55f, continentValue);
-            float microDetail = (detailValue * 2f - 1f) * math.lerp(0.06f, 0.2f, mountainMask) * inlandMask;
-            blended += microDetail;
-
-            float floodplainSmoothing = (1f - vegetationMask) * plainsMask * 0.03f;
-            blended = math.lerp(blended, flatlands, floodplainSmoothing);
-
-            float coastalFlattening = 1f - math.smoothstep(0.14f, 0.31f, continentValue);
-            blended = math.lerp(blended, blended * 0.86f, coastalFlattening);
-
-            return math.saturate(blended);
+            return h01;
         }
 
-        static float2 ApplyDomainWarp(float2 worldPosition, NoiseLayer detailLayer, NoiseLayer ridgeLayer)
+        // --- Helpers ------------------------------------------------------------
+
+        // Fractal Brownian Motion returning [0..1]
+        [BurstCompile]
+        private static float Fbm01(float2 p, NoiseLayer layer, int octaves, float lacunarity, float gain)
         {
-            float warpFrequency = math.max(detailLayer.frequency * 0.6f, 0.00005f);
+            float2 q = (p + layer.offset) * layer.frequency;
 
-            float2 xOffset = new float2(127.1f, 311.7f) + detailLayer.offset;
-            float2 yOffset = new float2(269.5f, 183.3f) + ridgeLayer.offset;
-
-            float warpX = noise.snoise((worldPosition + xOffset) * warpFrequency);
-            float warpY = noise.snoise((worldPosition + yOffset) * warpFrequency);
-
-            float warpStrength = math.max(12f, math.max(1f / math.max(detailLayer.frequency, 0.00001f), 1f / math.max(ridgeLayer.frequency, 0.00001f)) * 0.08f);
-            return worldPosition + new float2(warpX, warpY) * warpStrength;
-        }
-
-        static float2 ApplyMacroWarp(float2 worldPosition, NoiseLayer continentLayer, NoiseLayer detailLayer)
-        {
-            float macroFrequency = math.max(continentLayer.frequency * 0.8f, 0.00002f);
-            float detailFrequency = math.max(detailLayer.frequency * 0.5f, 0.00002f);
-
-            float2 xOffset = new float2(412.4f, 155.8f) + continentLayer.offset;
-            float2 yOffset = new float2(93.1f, 641.7f) + detailLayer.offset;
-
-            float warpX = noise.snoise((worldPosition + xOffset) * macroFrequency);
-            float warpY = noise.snoise((worldPosition + yOffset) * detailFrequency);
-
-            float warpStrength = math.max(18f, 1f / math.max(continentLayer.frequency, 0.00001f) * 0.045f);
-            return worldPosition + new float2(warpX, warpY) * warpStrength;
-        }
-        static float SampleFractalLayer(float2 worldPosition, NoiseLayer layer, int octaves, float lacunarity, float persistence)
-        {
-            return SampleLayer(worldPosition, layer, octaves, lacunarity, persistence, ridged: false);
-        }
-
-        static float SampleRidgedFractalLayer(float2 worldPosition, NoiseLayer layer, int octaves, float lacunarity, float persistence)
-        {
-            return SampleLayer(worldPosition, layer, octaves, lacunarity, persistence, ridged: true);
-        }
-
-        static float SampleLayer(float2 worldPosition, NoiseLayer layer, int octaves, float lacunarity, float persistence, bool ridged)
-        {
             float sum = 0f;
-            float amplitude = 1f;
-            float frequency = layer.frequency;
-            float totalAmplitude = 0f;
+            float amp = 1f;
+            float freq = 1f;
+            float norm = 0f;
 
             for (int i = 0; i < octaves; i++)
             {
-                float2 sample = (worldPosition + layer.offset) * frequency;
-                float octaveValue = noise.snoise(sample);
+                // noise.snoise returns roughly [-1..1]
+                float n = Unity.Mathematics.noise.snoise(q * freq);
+                sum += n * amp;
+                norm += amp;
 
-                if (ridged)
-                {
-                    octaveValue = 1f - math.abs(octaveValue);
-                    octaveValue *= octaveValue;
-                }
-                else
-                {
-                    octaveValue = octaveValue * 0.5f + 0.5f;
-                }
-
-                sum += octaveValue * amplitude;
-                totalAmplitude += amplitude;
-                amplitude *= persistence;
-                frequency *= lacunarity;
+                freq *= lacunarity;
+                amp *= gain;
             }
 
-            float normalizedValue = totalAmplitude > 0f ? sum / totalAmplitude : 0f;
+            // Normalize to [-1..1]
+            float nrm = (norm > 0f) ? (sum / norm) : 0f;
 
-            if (math.abs(layer.redistribution - 1f) > 0.0001f)
+            // Map to [0..1] and apply amplitude
+            float out01 = (nrm * 0.5f + 0.5f) * layer.amplitude;
+            return math.saturate(out01);
+        }
+
+        // Ridged multifractal-like noise returning [0..1]
+        [BurstCompile]
+        private static float Ridged01(float2 p, NoiseLayer layer, int octaves, float lacunarity, float gain)
+        {
+            float2 q = (p + layer.offset) * layer.frequency;
+
+            float sum = 0f;
+            float amp = 1f;
+            float freq = 1f;
+            float norm = 0f;
+
+            for (int i = 0; i < octaves; i++)
             {
-                normalizedValue = math.pow(normalizedValue, layer.redistribution);
+                float n = Unity.Mathematics.noise.snoise(q * freq); // [-1..1]
+                n = 1f - math.abs(n);                                    // ridges: [0..1]
+                n = n * n;                                          // sharpen
+
+                sum += n * amp;
+                norm += amp;
+
+                freq *= lacunarity;
+                amp *= gain;
             }
 
-            return normalizedValue * layer.amplitude;
+            float out01 = (norm > 0f) ? (sum / norm) : 0f;
+            out01 *= layer.amplitude;
+            return math.saturate(out01);
+        }
+
+        // Redistribution curve in [0..1] (higher => more extremes, lower => flatter)
+        [BurstCompile]
+        private static float Redistribute01(float x01, float redistribution)
+        {
+            // redistribution == 1 => identity
+            // >1 => push towards 0/1, <1 => pull towards 0.5
+            float r = math.max(0.0001f, redistribution);
+            return math.pow(math.saturate(x01), r);
+        }
+
+        [BurstCompile]
+        private static float Smooth01(float x) => x * x * (3f - 2f * x); // smoothstep(0,1,x) but cheaper
+
+        [BurstCompile]
+        private static float Contrast01(float x01, float k)
+        {
+            // k=1 => identity, >1 => more contrast, <1 => less
+            // symmetric curve around 0.5
+            float x = math.saturate(x01);
+            float a = math.pow(x, k);
+            float b = math.pow(1f - x, k);
+            return a / (a + b + 1e-6f);
         }
     }
 }

@@ -55,7 +55,7 @@ namespace BenScr.MinecraftClone
         private UnderwaterPostEffect underwaterEffect;
         internal bool isHeadInFluid;
         private bool isInFluid;
-        internal Block currentFluidBlock;
+        internal BlockData currentFluidBlock;
         private float defaultDrag;
         private float defaultAngularDrag;
 
@@ -166,7 +166,7 @@ namespace BenScr.MinecraftClone
                 transform.position += input * Time.deltaTime;
             }
 
-            if (Input.GetKey(KeyCode.Space) && !isInFluid && isGrounded)
+            if (Input.GetKey(KeyCode.Space) && !isInFluid && isGrounded  && rb.linearVelocity.y <= 0.1f)
             {
                 Jump();
             }
@@ -365,12 +365,12 @@ namespace BenScr.MinecraftClone
                 return false;
             }
 
-            Block block = AssetsContainer.GetBlock(blockId);
+            BlockData block = AssetsContainer.GetBlock(blockId);
             return block != null && block.isFluid;
         }
 
 
-        private bool TryGetFluidBlock(out Block fluidBlock)
+        private bool TryGetFluidBlock(out BlockData fluidBlock)
         {
             fluidBlock = null;
 
@@ -402,7 +402,7 @@ namespace BenScr.MinecraftClone
                     continue;
                 }
 
-                Block block = AssetsContainer.GetBlock(blockId);
+                BlockData block = AssetsContainer.GetBlock(blockId);
 
                 if (block != null && block.isFluid)
                 {
