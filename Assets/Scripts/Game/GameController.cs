@@ -14,7 +14,7 @@ namespace BenScr.MinecraftClone
 
         private void Awake()
         {
-            Application.targetFrameRate = targetFPS < 0 ? QualitySettings.vSyncCount : targetFPS;
+            Application.targetFrameRate = targetFPS < 0 ? 60 : targetFPS;
         }
         private void Update()
         {
