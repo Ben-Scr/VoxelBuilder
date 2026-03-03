@@ -9,13 +9,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: abac13aa19d2b3e49bc5d2430f31f720, type: 3}
+  m_Script: {fileID: 11500000, guid: d6643304ec9e5f042898ecbe8f2c137b, type: 3}
   m_Name: Wood
   m_EditorClassIdentifier: Assembly-CSharp::Block
-  durability: 0
+  durability: 5
   isTransparent: 0
   isFluid: 0
   preview: {fileID: -1696727680, guid: 5335917e6daf04640a6505b8f6b432c8, type: 3}
+  destroyEffect: {fileID: 0}
   backTexture: 13
   frontTexture: 13
   topTexture: 14

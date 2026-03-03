@@ -9,15 +9,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: abac13aa19d2b3e49bc5d2430f31f720, type: 3}
+  m_Script: {fileID: 11500000, guid: d6643304ec9e5f042898ecbe8f2c137b, type: 3}
   m_Name: Leaves
   m_EditorClassIdentifier: Assembly-CSharp::Block
-  durability: 0
+  durability: 5
   isTransparent: 1
   isFluid: 0
-  health: 0
   preview: {fileID: -1101336222, guid: 5335917e6daf04640a6505b8f6b432c8, type: 3}
-  destroyEffect: {fileID: 7981987944914651597, guid: 7b00b7caaab667d42a269b4f4a268c6d, type: 3}
+  destroyEffect: {fileID: 0}
   backTexture: 12
   frontTexture: 12
   topTexture: 12

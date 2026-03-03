@@ -477,7 +477,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 603292062}
-  - component: {fileID: 641790142}
   - component: {fileID: 641790152}
   - component: {fileID: 641790151}
   - component: {fileID: 641790154}
@@ -656,23 +655,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 612868812}
   m_CullTransparentMesh: 1
---- !u!114 &641790142
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 603069886}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d25d9037602ca2c42beb1c758eaa403a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  blockSelectionManager: {fileID: 1598258526}
-  maxInteractionDistance: 8
-  highlightBlock: {fileID: 1829771806}
-  breakBlockCooldown: 0.1
-  placeBlockCooldown: 0.1
 --- !u!54 &641790151
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -1672,7 +1654,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a05029bf95eb9b4ea782af4a59323c9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enableCaves: 1
+  enableCaves: 0
   caveNoise:
     scale: 48
     verticalScale: 32
@@ -1682,7 +1664,7 @@ MonoBehaviour:
   continentNoise:
     scale: 320
     amplitude: 1
-    redistribution: 3
+    redistribution: 1.5
     offset: {x: 0, y: 0}
   mountainNoise:
     scale: 120
@@ -1691,7 +1673,7 @@ MonoBehaviour:
     offset: {x: 0, y: 0}
   detailNoise:
     scale: 40
-    amplitude: 0.2
+    amplitude: 0.6
     redistribution: 1.5
     offset: {x: 0, y: 0}
   ridgeNoise:
@@ -1699,25 +1681,25 @@ MonoBehaviour:
     amplitude: 1.5
     redistribution: 1.6
     offset: {x: 0, y: 0}
-  flatlandsHeightMultiplier: 1.5
-  mountainHeightMultiplier: 15
-  mountainBlendStart: 0.55
-  mountainBlendSharpness: 4
+  flatlandsHeightMultiplier: 1.3
+  mountainHeightMultiplier: 4
+  mountainBlendStart: 0.5
+  mountainBlendSharpness: 0.68
   damageStagePrefab: {fileID: 4356685000339160228, guid: f608bd8fb793bda4481b2e5d379e87a2, type: 3}
   chunkPrefab: {fileID: 3185013692412290531, guid: b981763a46b934a499d0603c9bf705a8, type: 3}
   seed: 0
   addColliders: 1
-  addTrees: 1
-  viewDistance: 5
+  addTrees: 0
+  viewDistance: 10
   viewDistanceY: 3
-  noiseScale: 20
-  noiseHeight: 40
-  waterLevel: 0
-  groundOffset: 10
+  noiseScale: 220
+  noiseHeight: 1000
+  waterLevel: 50
+  groundOffset: -66
   chunkUpdateThreshold: 0
   shouldDisableChunks: 1
-  maxChunksCreatePerFrame: 4
-  maxChunksGeneratePerFrame: 4
+  maxChunksCreatePerFrame: 15
+  maxChunksGeneratePerFrame: 15
   addColliderDistance: 64
   player: {fileID: 641790152}
 --- !u!4 &1239169615
@@ -2463,7 +2445,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: 16b6fe614bb815d47b94f305250b2d40, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -2652,6 +2634,55 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1899783989}
   m_CullTransparentMesh: 1
+--- !u!1 &1909746816
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1909746818}
+  - component: {fileID: 1909746817}
+  m_Layer: 0
+  m_Name: BuildManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1909746817
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1909746816}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d25d9037602ca2c42beb1c758eaa403a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  blockSelectionManager: {fileID: 1598258526}
+  maxInteractionDistance: 8
+  highlightBlock: {fileID: 1829771806}
+  breakBlockCooldown: 0.1
+  placeBlockCooldown: 0.1
+--- !u!4 &1909746818
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1909746816}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2042252285
 GameObject:
   m_ObjectHideFlags: 0
@@ -2799,6 +2830,7 @@ SceneRoots:
   - {fileID: 371046035}
   - {fileID: 953644497}
   - {fileID: 200453249}
+  - {fileID: 1909746818}
   - {fileID: 603292062}
   - {fileID: 764922690}
   - {fileID: 1544200734}
