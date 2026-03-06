@@ -53,53 +53,29 @@ namespace BenScr.MinecraftClone
             List<int> transparentTriangles = new List<int>();
             List<Vector2> transparentUvs = new List<Vector2>();
 
-            int solidVertexIndex = 0;
-            int fluidVertexIndex = 0;
-            int leavesVertexIndex = 0;
+            GenerateGreedyMeshSection(
+                haloBlocks,
+                BlockRenderCategory.Solid,
+                solidVertices,
+                solidNormals,
+                solidTriangles,
+                solidUvs);
 
-            for (int x = 0; x < Chunk.CHUNK_SIZE; x++)
-            {
-                for (int y = 0; y < Chunk.CHUNK_HEIGHT; y++)
-                {
-                    for (int z = 0; z < Chunk.CHUNK_SIZE; z++)
-                    {
-                        int blockId = haloBlocks[x + 1, y + 1, z + 1];
-                        BlockData block = GetBlock(blockId);
+            GenerateGreedyMeshSection(
+                haloBlocks,
+                BlockRenderCategory.Fluid,
+                fluidVertices,
+                fluidNormals,
+                fluidTriangles,
+                fluidUvs);
 
-                        if (blockId != Chunk.BLOCK_AIR)
-                        {
-                            Vector3Int position = new Vector3Int(x, y, z);
-                            bool isFluid = block.isFluid;
-                            bool isTransparent = block.isTransparent;
-
-                            for (int face = 0; face < 6; face++)
-                            {
-                                int neighborBlockId = GetHalo(haloBlocks, position + cubeNormals[face]);
-                                BlockData neighbourBlock = GetBlock(neighborBlockId);
-
-                                bool neighbourIsTransparent = neighbourBlock.isTransparent;
-                                bool hidesFaceBecauseSameFluid = block.isFluid && neighbourBlock.id == block.id;
-
-                                if (neighbourIsTransparent && !hidesFaceBecauseSameFluid)
-                                {
-                                    if (isFluid)
-                                    {
-                                        AddFace(position, face, block, fluidVertices, fluidNormals, fluidTriangles, fluidUvs, ref fluidVertexIndex);
-                                    }
-                                    else if (isTransparent)
-                                    {
-                                        AddFace(position, face, block, transparentVertices, transparentNormals, transparentTriangles, transparentUvs, ref leavesVertexIndex);
-                                    }
-                                    else
-                                    {
-                                        AddFace(position, face, block, solidVertices, solidNormals, solidTriangles, solidUvs, ref solidVertexIndex);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            GenerateGreedyMeshSection(
+                haloBlocks,
+                BlockRenderCategory.Transparent,
+                transparentVertices,
+                transparentNormals,
+                transparentTriangles,
+                transparentUvs);
 
             return new MeshData(
                new MeshSection(solidTriangles, solidVertices, solidNormals, solidUvs),
@@ -107,27 +83,223 @@ namespace BenScr.MinecraftClone
                new MeshSection(transparentTriangles, transparentVertices, transparentNormals, transparentUvs));
         }
 
-        private static void AddFace(
-           Vector3Int position,
+        private static void GenerateGreedyMeshSection(
+            [ReadOnly] in byte[,,] haloBlocks,
+            BlockRenderCategory category,
+            List<Vector3> vertices,
+            List<Vector3> normals,
+            List<int> triangles,
+            List<Vector2> uvs)
+        {
+            int vertexIndex = 0;
+
+            for (int face = 0; face < 6; face++)
+            {
+                GenerateGreedyFaceData(haloBlocks, category, face, vertices, normals, triangles, uvs, ref vertexIndex);
+            }
+        }
+
+        private static void GenerateGreedyFaceData(
+            [ReadOnly] in byte[,,] haloBlocks,
+            BlockRenderCategory category,
+            int face,
+            List<Vector3> vertices,
+            List<Vector3> normals,
+            List<int> triangles,
+            List<Vector2> uvs,
+            ref int vertexIndex)
+        {
+            int uSize = Chunk.CHUNK_SIZE;
+            int vSize = face == 2 || face == 3 ? Chunk.CHUNK_SIZE : Chunk.CHUNK_HEIGHT;
+            int depthSize = (face == 2 || face == 3) ? Chunk.CHUNK_HEIGHT : Chunk.CHUNK_SIZE;
+
+            int[] textureMask = new int[uSize * vSize];
+
+            for (int depth = 0; depth < depthSize; depth++)
+            {
+                Array.Fill(textureMask, -1);
+
+                for (int u = 0; u < uSize; u++)
+                {
+                    for (int v = 0; v < vSize; v++)
+                    {
+                        Vector3Int pos = GetPositionForFace(face, depth, u, v);
+                        int blockId = haloBlocks[pos.x + 1, pos.y + 1, pos.z + 1];
+
+                        if (blockId == Chunk.BLOCK_AIR)
+                        {
+                            continue;
+                        }
+
+                        BlockData block = GetBlock(blockId);
+                        if (!BelongsToCategory(block, category))
+                        {
+                            continue;
+                        }
+
+                        int neighborBlockId = GetHalo(haloBlocks, pos + cubeNormals[face]);
+                        BlockData neighborBlock = GetBlock(neighborBlockId);
+
+                        bool neighborIsTransparent = neighborBlock.isTransparent;
+                        bool hidesFaceBecauseSameFluid = block.isFluid && neighborBlock.id == block.id;
+
+                        if (neighborIsTransparent && !hidesFaceBecauseSameFluid)
+                        {
+                            textureMask[u + v * uSize] = block.GetTexture(face);
+                        }
+                    }
+                }
+
+                for (int v = 0; v < vSize; v++)
+                {
+                    for (int u = 0; u < uSize;)
+                    {
+                        int textureId = textureMask[u + v * uSize];
+                        if (textureId < 0)
+                        {
+                            u++;
+                            continue;
+                        }
+
+                        int width = 1;
+                        while (u + width < uSize && textureMask[(u + width) + v * uSize] == textureId)
+                        {
+                            width++;
+                        }
+
+                        int height = 1;
+                        bool done = false;
+                        while (v + height < vSize && !done)
+                        {
+                            for (int k = 0; k < width; k++)
+                            {
+                                if (textureMask[(u + k) + (v + height) * uSize] != textureId)
+                                {
+                                    done = true;
+                                    break;
+                                }
+                            }
+
+                            if (!done)
+                            {
+                                height++;
+                            }
+                        }
+
+                        AddGreedyQuad(face, depth, u, v, width, height, textureId, vertices, normals, triangles, uvs, ref vertexIndex);
+
+                        for (int dy = 0; dy < height; dy++)
+                        {
+                            for (int dx = 0; dx < width; dx++)
+                            {
+                                textureMask[(u + dx) + (v + dy) * uSize] = -1;
+                            }
+                        }
+
+                        u += width;
+                    }
+                }
+            }
+        }
+
+        private static bool BelongsToCategory(BlockData block, BlockRenderCategory category)
+        {
+            switch (category)
+            {
+                case BlockRenderCategory.Solid:
+                    return !block.isFluid && !block.isTransparent;
+                case BlockRenderCategory.Fluid:
+                    return block.isFluid;
+                case BlockRenderCategory.Transparent:
+                    return !block.isFluid && block.isTransparent;
+                default:
+                    return false;
+            }
+        }
+
+        private static Vector3Int GetPositionForFace(int face, int depth, int u, int v)
+        {
+            switch (face)
+            {
+                case 0:
+                case 1:
+                    return new Vector3Int(u, v, depth);
+                case 2:
+                case 3:
+                    return new Vector3Int(u, depth, v);
+                case 4:
+                case 5:
+                    return new Vector3Int(depth, v, u);
+                default:
+                    return Vector3Int.zero;
+            }
+        }
+
+        private static void AddGreedyQuad(
            int face,
-           BlockData block,
+           int depth,
+           int u,
+           int v,
+           int width,
+           int height,
+           int textureId,
            List<Vector3> vertices,
            List<Vector3> normals,
            List<int> triangles,
            List<Vector2> uvs,
            ref int vertexIndex)
         {
-            vertices.Add(position + cubeVertices[cubeTriangles[face, 0]]);
-            vertices.Add(position + cubeVertices[cubeTriangles[face, 1]]);
-            vertices.Add(position + cubeVertices[cubeTriangles[face, 2]]);
-            vertices.Add(position + cubeVertices[cubeTriangles[face, 3]]);
+            Vector3 origin;
+            Vector3 axisU;
+            Vector3 axisV;
+
+            switch (face)
+            {
+                case 0: // back
+                    origin = new Vector3(u, v, depth);
+                    axisU = new Vector3(width, 0f, 0f);
+                    axisV = new Vector3(0f, height, 0f);
+                    break;
+                case 1: // front
+                    origin = new Vector3(u + width, v, depth + 1);
+                    axisU = new Vector3(-width, 0f, 0f);
+                    axisV = new Vector3(0f, height, 0f);
+                    break;
+                case 2: // top
+                    origin = new Vector3(u, depth + 1, v);
+                    axisU = new Vector3(width, 0f, 0f);
+                    axisV = new Vector3(0f, 0f, height);
+                    break;
+                case 3: // bottom
+                    origin = new Vector3(u + width, depth, v);
+                    axisU = new Vector3(-width, 0f, 0f);
+                    axisV = new Vector3(0f, 0f, height);
+                    break;
+                case 4: // left
+                    origin = new Vector3(depth, v, u + width);
+                    axisU = new Vector3(0f, 0f, -width);
+                    axisV = new Vector3(0f, height, 0f);
+                    break;
+                case 5: // right
+                    origin = new Vector3(depth + 1, v, u);
+                    axisU = new Vector3(0f, 0f, width);
+                    axisV = new Vector3(0f, height, 0f);
+                    break;
+                default:
+                    return;
+            }
+
+            vertices.Add(origin);
+            vertices.Add(origin + axisV);
+            vertices.Add(origin + axisU);
+            vertices.Add(origin + axisU + axisV);
 
             for (int i = 0; i < 4; i++)
             {
                 normals.Add(cubeNormals[face]);
             }
 
-            AddTexture(block.GetTexture(face), ref uvs);
+            AddTexture(textureId, ref uvs);
 
             triangles.Add(vertexIndex);
             triangles.Add(vertexIndex + 1);
@@ -137,6 +309,13 @@ namespace BenScr.MinecraftClone
             triangles.Add(vertexIndex + 3);
 
             vertexIndex += 4;
+        }
+
+        private enum BlockRenderCategory
+        {
+            Solid,
+            Fluid,
+            Transparent
         }
 
         private static byte GetHalo(byte[,,] haloBlocks, Vector3Int pos)
