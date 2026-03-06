@@ -12,6 +12,7 @@ namespace BenScr.MinecraftClone
     using System.Collections.Generic;
     using Unity.Mathematics;
     using UnityEngine;
+    using UnityEngine.UI;
 
     public class TerrainGenerator : MonoBehaviour
     {
@@ -27,6 +28,7 @@ namespace BenScr.MinecraftClone
         [SerializeField] private int maxChunksGeneratePerFrame = 2;
         [SerializeField] private float addColliderDistance = 10f;
         [SerializeField] private PlayerController player;
+        [SerializeField] private Image loadTerrainSlider;
 
         public static Action OnLoadedTerrain;
         public static TerrainGenerator instance;
@@ -80,6 +82,10 @@ namespace BenScr.MinecraftClone
             yield return null;
 
             // poses are relative, already sorted nearest-first
+
+            int count = 0;
+            float chunksCount = poses.Length * 2.0f;
+
             for (int i = 0; i < poses.Length; i++)
             {
                 Vector3Int pos = poses[i];
@@ -88,17 +94,25 @@ namespace BenScr.MinecraftClone
                 chunk.Prepare();
                 chunks.Add(chunk.coordinate, chunk);
                 currentActiveChunks.Add(chunk.coordinate);
+
+                if (++count % 10 == 0)
+                {
+                    yield return null;
+                    loadTerrainSlider.fillAmount = count / chunksCount;
+                }
             }
 
             yield return null;
 
-            int count = 0;
             foreach (var chunk in chunks.Values)
             {
                 chunk.Generate();
 
                 if (++count % 5 == 0)
+                {
                     yield return null;
+                    loadTerrainSlider.fillAmount = count / chunksCount;
+                }
             }
 
             yield return new WaitForSeconds(1.0f);
@@ -108,7 +122,7 @@ namespace BenScr.MinecraftClone
             if (highestChunk != null)
             {
                 int highestPosY = GetHighestBlockPositionYAt(0, (int)highestChunk.position.y, 0);
-                playerTransform.position = new Vector3(0.5f, highestPosY + 1.5f, 0.5f);
+                playerTransform.position = new Vector3(0.5f, highestPosY + 2.0f, 0.5f);
             }
             else
             {
@@ -154,7 +168,6 @@ namespace BenScr.MinecraftClone
             lastViewDistance = viewDistance;
             lastViewDistanceY = viewDistanceY;
 
-            // Force rebuild next Update
             lastPlayerChunk = new Vector3Int(int.MinValue, int.MinValue, int.MinValue);
         }
 
@@ -177,8 +190,6 @@ namespace BenScr.MinecraftClone
 
                     for (int z = -rz; z <= rz; z++)
                     {
-                        // Keep same visibility shape as your runtime checks:
-                        // circular in XZ, bounded in Y
                         int xzSq = xSq + z * z;
                         if (xzSq > viewDistanceXZSq)
                             continue;
