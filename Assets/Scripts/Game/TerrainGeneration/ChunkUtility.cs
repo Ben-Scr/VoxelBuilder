@@ -4,32 +4,58 @@ namespace BenScr.MinecraftClone
 {
     public static class ChunkUtility
     {
-        public static int GetBlockAtPosition(Vector3 worldPos)
+        public static int GetBlockAtPosition(Vector3 worldPos) => GetBlockAtPosition(SnapPosition(worldPos));
+        public static int GetBlockAtPosition(Vector3Int worldPos)
         {
-            var wx = Mathf.FloorToInt(worldPos.x);
-            var wy = Mathf.FloorToInt(worldPos.y);
-            var wz = Mathf.FloorToInt(worldPos.z);
-            return GetBlockAtBlock(new Vector3Int(wx, wy, wz));
-        }
-        public static int GetBlockAtBlock(Vector3Int world)
-        {
-            var cx = Mathf.FloorToInt((float)world.x / Chunk.CHUNK_SIZE);
-            var cy = Mathf.FloorToInt((float)world.y / Chunk.CHUNK_HEIGHT);
-            var cz = Mathf.FloorToInt((float)world.z / Chunk.CHUNK_SIZE);
+            var cx = Mathf.FloorToInt((float)worldPos.x / Chunk.CHUNK_SIZE);
+            var cy = Mathf.FloorToInt((float)worldPos.y / Chunk.CHUNK_HEIGHT);
+            var cz = Mathf.FloorToInt((float)worldPos.z / Chunk.CHUNK_SIZE);
             var cCoord = new Vector3Int(cx, cy, cz);
 
             if (!TerrainGenerator.chunks.TryGetValue(cCoord, out var chunk))
                 return Chunk.BLOCK_AIR;
 
-            var lx = world.x - cx * Chunk.CHUNK_SIZE;
-            var ly = world.y - cy * Chunk.CHUNK_HEIGHT;
-            var lz = world.z - cz * Chunk.CHUNK_SIZE;
+            var lx = worldPos.x - cx * Chunk.CHUNK_SIZE;
+            var ly = worldPos.y - cy * Chunk.CHUNK_HEIGHT;
+            var lz = worldPos.z - cz * Chunk.CHUNK_SIZE;
 
 
             if ((uint)lx >= Chunk.CHUNK_SIZE || (uint)ly >= Chunk.CHUNK_HEIGHT || (uint)lz >= Chunk.CHUNK_SIZE)
                 return Chunk.BLOCK_AIR;
 
             return chunk.blocks[lx, ly, lz];
+        }
+
+        public static Chunk GetChunkAtCoordinate(Vector3Int chunkCoord)
+        {
+            if (TerrainGenerator.chunks.TryGetValue(chunkCoord, out Chunk chunk))
+            {
+                return chunk;
+            }
+
+            return null;
+        }
+        public static Chunk GetChunkAtPosition(Vector3 position)
+        {
+            Vector3Int coordinate = GetChunkCoordinateFromPosition(position);
+
+            if (TerrainGenerator.chunks.TryGetValue(new Vector3Int(coordinate.x, coordinate.y, coordinate.z), out Chunk chunk))
+            {
+                return chunk;
+            }
+
+            return null;
+        }
+        public static Chunk GetHighestChunkAt(Vector3 worldPosition)
+        {
+            for (int y = 0; y < 10; y++)
+            {
+                Vector3 pos = new Vector3(worldPosition.x, y * Chunk.CHUNK_HEIGHT + worldPosition.y, worldPosition.z);
+                Chunk chunk = GetChunkAtPosition(pos);
+
+                if (chunk.IsTop) return GetChunkAtPosition(pos);
+            }
+            return null;
         }
 
         public static bool IsInsideChunk(Vector3Int relativePosition)
@@ -52,17 +78,6 @@ namespace BenScr.MinecraftClone
                    TerrainGenerator.chunks.ContainsKey(chunkCoord + Vector3Int.down);
         }
 
-
-        public static Chunk GetChunkByCoordinate(Vector3Int coordinate)
-        {
-            if (TerrainGenerator.chunks.TryGetValue(coordinate, out Chunk chunk))
-            {
-                return chunk;
-            }
-
-            return null;
-        }
-
         public static Vector3Int GetChunkCoordinateFromPosition(Vector3 position)
         {
             int chunkX = Mathf.FloorToInt(position.x / Chunk.CHUNK_SIZE);
@@ -72,17 +87,9 @@ namespace BenScr.MinecraftClone
             return new Vector3Int(chunkX, chunkY, chunkZ);
         }
 
-        public static Chunk GetChunkByPosition(Vector3 position)
-        {
-            Vector3Int coordinate = GetChunkCoordinateFromPosition(position);
-
-            if (TerrainGenerator.chunks.TryGetValue(new Vector3Int(coordinate.x, coordinate.y, coordinate.z), out Chunk chunk))
-            {
-                return chunk;
-            }
-
-            return null;
-        }
-
+        public static Vector3Int SnapPosition(Vector3 position)
+                => new Vector3Int(Mathf.FloorToInt(position.x),
+                                  Mathf.FloorToInt(position.y),
+                                  Mathf.FloorToInt(position.z));
     }
 }

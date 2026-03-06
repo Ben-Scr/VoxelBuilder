@@ -13,6 +13,7 @@ namespace BenScr.MinecraftClone
         [SerializeField] private BlockSelectionManager blockSelectionManager;
         [SerializeField] private float maxInteractionDistance = 5;
         [SerializeField] private GameObject highlightBlock;
+        [SerializeField] private GameObject damageStagePrefab;
         [SerializeField] private float breakBlockCooldown = 0.1f;
         [SerializeField] private float placeBlockCooldown = 0.1f;
 
@@ -23,7 +24,7 @@ namespace BenScr.MinecraftClone
 
         private float breakBlockTimer = 0f;
         private float placeBlockTimer = 0f;
-       
+
 
         void Update()
         {
@@ -47,10 +48,10 @@ namespace BenScr.MinecraftClone
                 {
                     breakBlockTimer = 0f;
 
-                    if(PlayerController.instance.isFlying)
-                    TerrainGenerator.instance.SetBlock(highlightPosition, Chunk.BLOCK_AIR);
+                    if (PlayerController.instance.isFlying)
+                        TerrainUtility.DestroyBlock(highlightPosition);
                     else
-                        TerrainGenerator.instance.DamageBlock(highlightPosition);
+                        TerrainUtility.DamageBlock(highlightPosition, 1);
                 }
 
                 if (Input.GetMouseButton(1) && placeBlockTimer > placeBlockCooldown)
@@ -60,9 +61,7 @@ namespace BenScr.MinecraftClone
                     bool overlapsWithPlayer = Physics.CheckBox(center, halfExtents, Quaternion.identity, LayerMask.GetMask("Player"));
 
                     if (!overlapsWithPlayer)
-                    {
-                        TerrainGenerator.instance.SetBlock(placeBlockPosition, blockSelectionManager.selectedBlock.id);
-                    }
+                        TerrainUtility.SetBlock(placeBlockPosition, blockSelectionManager.selectedBlock.id);
                 }
             }
 
@@ -71,30 +70,58 @@ namespace BenScr.MinecraftClone
 
         private void UpdateHighlightBlock()
         {
-            float distance = 0;
+            Transform cam = Camera.main.transform;
+
+            Vector3 origin = cam.position;
+            Vector3 dir = cam.forward.normalized;
 
             isHighlightBlockVisible = false;
-            highlightBlock.SetActive(false);
 
-            Vector3 lastPosition = Vector3.zero;
+            Vector3Int current = new Vector3Int(
+                Mathf.FloorToInt(origin.x),
+                Mathf.FloorToInt(origin.y),
+                Mathf.FloorToInt(origin.z)
+            );
 
-            while (distance < maxInteractionDistance)
+            int stepX = dir.x >= 0 ? 1 : -1;
+            int stepY = dir.y >= 0 ? 1 : -1;
+            int stepZ = dir.z >= 0 ? 1 : -1;
+
+            float tDeltaX = dir.x == 0 ? float.PositiveInfinity : Mathf.Abs(1f / dir.x);
+            float tDeltaY = dir.y == 0 ? float.PositiveInfinity : Mathf.Abs(1f / dir.y);
+            float tDeltaZ = dir.z == 0 ? float.PositiveInfinity : Mathf.Abs(1f / dir.z);
+
+            float nextBoundaryX = stepX > 0 ? current.x + 1f : current.x;
+            float nextBoundaryY = stepY > 0 ? current.y + 1f : current.y;
+            float nextBoundaryZ = stepZ > 0 ? current.z + 1f : current.z;
+
+            float tMaxX = dir.x == 0 ? float.PositiveInfinity : Mathf.Abs((nextBoundaryX - origin.x) / dir.x);
+            float tMaxY = dir.y == 0 ? float.PositiveInfinity : Mathf.Abs((nextBoundaryY - origin.y) / dir.y);
+            float tMaxZ = dir.z == 0 ? float.PositiveInfinity : Mathf.Abs((nextBoundaryZ - origin.z) / dir.z);
+
+            Vector3Int previous = current;
+            Vector3Int hitNormal = Vector3Int.zero;
+
+            float traveled = 0f;
+
+            while (traveled <= maxInteractionDistance)
             {
-                Vector3 position = Camera.main.transform.position +
-                    Camera.main.transform.forward * distance;
+                int blockID = ChunkUtility.GetBlockAtPosition(current);
 
-                highlightPosition = new Vector3(
-                       Mathf.FloorToInt(position.x),
-                       Mathf.FloorToInt(position.y),
-                       Mathf.FloorToInt(position.z)
-                       );
-
-                int blockID = ChunkUtility.GetBlockAtPosition(highlightPosition);
                 if (blockID != Chunk.BLOCK_AIR && blockID != Chunk.BLOCK_WATER)
                 {
+                    highlightPosition = current;
+                    placeBlockPosition = current + hitNormal;
+
+                    highlightBlock.transform.position = (Vector3)current + Vector3.one * 0.5f;
+                    isHighlightBlockVisible = true;
+
+                    if (!highlightBlock.activeSelf)
+                        highlightBlock.SetActive(true);
+
                     if (Input.GetKeyDown(KeyCode.E))
                     {
-                        Chunk chunk = ChunkUtility.GetChunkByPosition(highlightPosition);
+                        Chunk chunk = ChunkUtility.GetChunkAtPosition(current);
                         Debug.Log("Highlighted block: " + AssetsContainer.GetBlock(blockID).name);
                         Debug.Log("In Chunk at position " + chunk.coordinate + " AirOnly:" + chunk.isAirOnly
                             + " HighestGroundlevel:" + chunk.highestGroundLevel + " LowestGroundlevel:"
@@ -102,18 +129,49 @@ namespace BenScr.MinecraftClone
                             + " IsGenerated:" + chunk.isGenerated);
                     }
 
-                    highlightBlock.transform.position = highlightPosition + new Vector3(0.5f, 0.5f, 0.5f);
-
-                    isHighlightBlockVisible = true;
-                    highlightBlock.SetActive(true);
-
-                    placeBlockPosition = lastPosition;
-                    break;
+                    return;
                 }
 
-                lastPosition = highlightPosition;
-                distance += 0.1f;
+                previous = current;
+
+                if (tMaxX < tMaxY)
+                {
+                    if (tMaxX < tMaxZ)
+                    {
+                        current.x += stepX;
+                        traveled = tMaxX;
+                        tMaxX += tDeltaX;
+                        hitNormal = new Vector3Int(-stepX, 0, 0);
+                    }
+                    else
+                    {
+                        current.z += stepZ;
+                        traveled = tMaxZ;
+                        tMaxZ += tDeltaZ;
+                        hitNormal = new Vector3Int(0, 0, -stepZ);
+                    }
+                }
+                else
+                {
+                    if (tMaxY < tMaxZ)
+                    {
+                        current.y += stepY;
+                        traveled = tMaxY;
+                        tMaxY += tDeltaY;
+                        hitNormal = new Vector3Int(0, -stepY, 0);
+                    }
+                    else
+                    {
+                        current.z += stepZ;
+                        traveled = tMaxZ;
+                        tMaxZ += tDeltaZ;
+                        hitNormal = new Vector3Int(0, 0, -stepZ);
+                    }
+                }
             }
+
+            if (highlightBlock.activeSelf)
+                highlightBlock.SetActive(false);
         }
     }
 }

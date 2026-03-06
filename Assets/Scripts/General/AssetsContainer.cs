@@ -13,7 +13,7 @@ namespace BenScr.MinecraftClone
 
         public Material fluidMaterial;
         public Material transparentMaterial;
-
+        public GameObject damageStagePrefab;
 
         public static AssetsContainer instance;
 

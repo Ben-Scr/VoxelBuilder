@@ -25,6 +25,11 @@ namespace BenScr.MinecraftClone
             this.z = z;
         }
 
+        public static explicit operator ByteVector3(Vector3 vector3)
+        {
+            return new ByteVector3((byte)vector3.x, (byte)vector3.y, (byte)vector3.z);
+        }
+
         public bool Equals(ByteVector3 other) => x == other.x && y == other.y && z == other.z;
         public override bool Equals(object obj) => obj is ByteVector3 other && Equals(other);
 
@@ -135,10 +140,10 @@ namespace BenScr.MinecraftClone
                 {
                     Generate();
 
-                    Chunk front = ChunkUtility.GetChunkByCoordinate(new Vector3Int(coordinate.x, coordinate.y, coordinate.z + 1));
-                    Chunk back = ChunkUtility.GetChunkByCoordinate(new Vector3Int(coordinate.x, coordinate.y, coordinate.z - 1));
-                    Chunk right = ChunkUtility.GetChunkByCoordinate(new Vector3Int(coordinate.x + 1, coordinate.y, coordinate.z));
-                    Chunk left = ChunkUtility.GetChunkByCoordinate(new Vector3Int(coordinate.x - 1, coordinate.y, coordinate.z));
+                    Chunk front = ChunkUtility.GetChunkAtCoordinate(new Vector3Int(coordinate.x, coordinate.y, coordinate.z + 1));
+                    Chunk back = ChunkUtility.GetChunkAtCoordinate(new Vector3Int(coordinate.x, coordinate.y, coordinate.z - 1));
+                    Chunk right = ChunkUtility.GetChunkAtCoordinate(new Vector3Int(coordinate.x + 1, coordinate.y, coordinate.z));
+                    Chunk left = ChunkUtility.GetChunkAtCoordinate(new Vector3Int(coordinate.x - 1, coordinate.y, coordinate.z));
 
                     if (front != null && blockPosition.z == CHUNK_SIZE - 1) front.Generate();
                     if (back != null && blockPosition.z == 0) back.Generate();
@@ -176,7 +181,7 @@ namespace BenScr.MinecraftClone
             transparentFilter = transparentGameObject.GetComponent<MeshFilter>();
             transparentRenderer.material = AssetsContainer.instance.transparentMaterial;
 
-            bool isAboveTopChunk = ChunkUtility.GetChunkByCoordinate(coordinate + Vector3Int.down)?.IsTop ?? false;
+            bool isAboveTopChunk = ChunkUtility.GetChunkAtCoordinate(coordinate + Vector3Int.down)?.IsTop ?? false;
 
             if (!isAboveTopChunk)
             {
@@ -197,7 +202,7 @@ namespace BenScr.MinecraftClone
 
             try
             {
-                TerrainGenerator.instance.GetNoiseLayers(out var continentLayer, out var mountainLayer, out var detailLayer, out var ridgeLayer);
+                NoiseSettings.instance.GetNoiseLayers(out var continentLayer, out var mountainLayer, out var detailLayer, out var ridgeLayer);
 
                 GenerateTerrainHeightMapJob heightJob = new GenerateTerrainHeightMapJob
                 {
@@ -208,12 +213,12 @@ namespace BenScr.MinecraftClone
                     mountainLayer = mountainLayer,
                     detailLayer = detailLayer,
                     ridgeLayer = ridgeLayer,
-                    flatlandsHeightMultiplier = TerrainGenerator.instance.flatlandsHeightMultiplier,
-                    mountainHeightMultiplier = TerrainGenerator.instance.mountainHeightMultiplier,
-                    mountainBlendStart = TerrainGenerator.instance.mountainBlendStart,
-                    mountainBlendSharpness = TerrainGenerator.instance.mountainBlendSharpness,
-                    noiseHeight = TerrainGenerator.instance.noiseHeight,
-                    groundOffset = TerrainGenerator.instance.groundOffset,
+                    flatlandsHeightMultiplier = NoiseSettings.instance.flatlandsHeightMultiplier,
+                    mountainHeightMultiplier = NoiseSettings.instance.mountainHeightMultiplier,
+                    mountainBlendStart = NoiseSettings.instance.mountainBlendStart,
+                    mountainBlendSharpness = NoiseSettings.instance.mountainBlendSharpness,
+                    noiseHeight = NoiseSettings.instance.noiseHeight,
+                    groundOffset = NoiseSettings.instance.groundOffset,
                 };
 
                 JobHandle heightHandle = heightJob.Schedule(heightMap.Length, 64);
@@ -225,14 +230,14 @@ namespace BenScr.MinecraftClone
                     blocks = Blocks,
                     chunkSize = CHUNK_SIZE,
                     chunkHeight = CHUNK_HEIGHT,
-                    groundOffset = TerrainGenerator.instance.groundOffset,
+                    groundOffset = NoiseSettings.instance.groundOffset,
                     heightMap = heightMap,
                     chunkCoordinate = new int3(coordinate.x, coordinate.y, coordinate.z),
-                    caveNoise = TerrainGenerator.instance.caveNoise,
-                    enableCaves = TerrainGenerator.instance.enableCaves,
-                    noiseOffset = TerrainGenerator.instance.noiseOffset,
-                    caveNoiseRuntimeOffset = TerrainGenerator.instance.caveNoiseRuntimeOffset,
-                    waterLevel = TerrainGenerator.instance.waterLevel,
+                    caveNoise = NoiseSettings.instance.caveNoise,
+                    enableCaves = NoiseSettings.instance.enableCaves,
+                    noiseOffset = NoiseSettings.instance.noiseOffset,
+                    caveNoiseRuntimeOffset = NoiseSettings.instance.caveNoiseRuntimeOffset,
+                    waterLevel = NoiseSettings.instance.waterLevel,
                 };
 
                 JobHandle blockHandle = generateBlocksJob.Schedule(Blocks.Length, 64);
@@ -348,12 +353,12 @@ namespace BenScr.MinecraftClone
                 }
             }
 
-            Chunk negX = ChunkUtility.GetChunkByCoordinate(new Vector3Int(coordinate.x - 1, coordinate.y, coordinate.z));
-            Chunk posX = ChunkUtility.GetChunkByCoordinate(new Vector3Int(coordinate.x + 1, coordinate.y, coordinate.z));
-            Chunk negY = ChunkUtility.GetChunkByCoordinate(new Vector3Int(coordinate.x, coordinate.y - 1, coordinate.z));
-            Chunk posY = ChunkUtility.GetChunkByCoordinate(new Vector3Int(coordinate.x, coordinate.y + 1, coordinate.z));
-            Chunk negZ = ChunkUtility.GetChunkByCoordinate(new Vector3Int(coordinate.x, coordinate.y, coordinate.z - 1));
-            Chunk posZ = ChunkUtility.GetChunkByCoordinate(new Vector3Int(coordinate.x, coordinate.y, coordinate.z + 1));
+            Chunk negX = ChunkUtility.GetChunkAtCoordinate(new Vector3Int(coordinate.x - 1, coordinate.y, coordinate.z));
+            Chunk posX = ChunkUtility.GetChunkAtCoordinate(new Vector3Int(coordinate.x + 1, coordinate.y, coordinate.z));
+            Chunk negY = ChunkUtility.GetChunkAtCoordinate(new Vector3Int(coordinate.x, coordinate.y - 1, coordinate.z));
+            Chunk posY = ChunkUtility.GetChunkAtCoordinate(new Vector3Int(coordinate.x, coordinate.y + 1, coordinate.z));
+            Chunk negZ = ChunkUtility.GetChunkAtCoordinate(new Vector3Int(coordinate.x, coordinate.y, coordinate.z - 1));
+            Chunk posZ = ChunkUtility.GetChunkAtCoordinate(new Vector3Int(coordinate.x, coordinate.y, coordinate.z + 1));
 
             // West face (x = -1 relative to chunk).
             for (int y = 0; y < SY; y++)
@@ -368,7 +373,7 @@ namespace BenScr.MinecraftClone
                     }
                     else
                     {
-                        halo[0, y + 1, z + 1] = (byte)ChunkUtility.GetBlockAtBlock(new Vector3Int(originX - 1, worldY, worldZ));
+                        halo[0, y + 1, z + 1] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(originX - 1, worldY, worldZ));
                     }
                 }
             }
@@ -386,7 +391,7 @@ namespace BenScr.MinecraftClone
                     }
                     else
                     {
-                        halo[SX + 1, y + 1, z + 1] = (byte)ChunkUtility.GetBlockAtBlock(new Vector3Int(originX + SX, worldY, worldZ));
+                        halo[SX + 1, y + 1, z + 1] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(originX + SX, worldY, worldZ));
                     }
                 }
             }
@@ -404,7 +409,7 @@ namespace BenScr.MinecraftClone
                     }
                     else
                     {
-                        halo[x + 1, 0, z + 1] = (byte)ChunkUtility.GetBlockAtBlock(new Vector3Int(worldX, originY - 1, worldZ));
+                        halo[x + 1, 0, z + 1] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(worldX, originY - 1, worldZ));
                     }
                 }
             }
@@ -422,7 +427,7 @@ namespace BenScr.MinecraftClone
                     }
                     else
                     {
-                        halo[x + 1, SY + 1, z + 1] = (byte)ChunkUtility.GetBlockAtBlock(new Vector3Int(worldX, originY + SY, worldZ));
+                        halo[x + 1, SY + 1, z + 1] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(worldX, originY + SY, worldZ));
                     }
                 }
             }
@@ -440,7 +445,7 @@ namespace BenScr.MinecraftClone
                     }
                     else
                     {
-                        halo[x + 1, y + 1, 0] = (byte)ChunkUtility.GetBlockAtBlock(new Vector3Int(worldX, worldY, originZ - 1));
+                        halo[x + 1, y + 1, 0] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(worldX, worldY, originZ - 1));
                     }
                 }
             }
@@ -458,7 +463,7 @@ namespace BenScr.MinecraftClone
                     }
                     else
                     {
-                        halo[x + 1, y + 1, SZ + 1] = (byte)ChunkUtility.GetBlockAtBlock(new Vector3Int(worldX, worldY, originZ + SZ));
+                        halo[x + 1, y + 1, SZ + 1] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(worldX, worldY, originZ + SZ));
                     }
                 }
             }
@@ -483,7 +488,7 @@ namespace BenScr.MinecraftClone
                         if (boundaryCount >= 2)
                         {
                             int worldZ = originZ + z - 1;
-                            halo[x, y, z] = (byte)ChunkUtility.GetBlockAtBlock(new Vector3Int(worldX, worldY, worldZ));
+                            halo[x, y, z] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(worldX, worldY, worldZ));
                         }
                     }
                 }
@@ -559,7 +564,7 @@ namespace BenScr.MinecraftClone
             [ReadOnly] public int groundOffset;
             [ReadOnly] public int3 chunkCoordinate;
             [ReadOnly] public bool enableCaves;
-            [ReadOnly] public TerrainGenerator.CaveNoiseSettings caveNoise;
+            [ReadOnly] public NoiseSettings.CaveNoiseSettings caveNoise;
             [ReadOnly] public float3 caveNoiseRuntimeOffset;
             [ReadOnly] public float2 noiseOffset;
             [ReadOnly] public int waterLevel;
