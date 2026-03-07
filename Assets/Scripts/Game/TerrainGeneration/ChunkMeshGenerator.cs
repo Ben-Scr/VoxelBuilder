@@ -123,10 +123,11 @@ namespace BenScr.MinecraftClone
 
                         int neighborBlockId = GetHalo(haloBlocks, position + cubeNormals[face]);
                         BlockData neighbourBlock = GetBlock(neighborBlockId);
-                        bool neighbourIsTransparent = neighbourBlock == null || neighbourBlock.isTransparent;
+                        bool neighbourIsOpaque = neighbourBlock != null && !neighbourBlock.isTransparent;
                         bool hidesFaceBecauseSameFluid = block.isFluid && neighbourBlock != null && neighbourBlock.id == block.id;
+                        bool hidesFaceBecauseSameTransparent = block.isTransparent && neighbourBlock != null && neighbourBlock.id == block.id;
 
-                        if (!neighbourIsTransparent || hidesFaceBecauseSameFluid)
+                        if (neighbourIsOpaque || hidesFaceBecauseSameFluid || hidesFaceBecauseSameTransparent)
                         {
                             continue;
                         }
@@ -352,16 +353,18 @@ namespace BenScr.MinecraftClone
 
         private static void AddTexture(BlockData.FaceTextureData textureData, int duTiles, int dvTiles, ref List<Vector2> uvs)
         {
-            float u0 = textureData.uvMin.x + UV_EPSILON;
-            float v0 = textureData.uvMin.y + UV_EPSILON;
-            float u1 = textureData.uvMax.x - UV_EPSILON;
-            float v1 = textureData.uvMax.y - UV_EPSILON;
+            float tileWidth = textureData.uvMax.x - textureData.uvMin.x;
+            float tileHeight = textureData.uvMax.y - textureData.uvMin.y;
 
-            float tileWidth = u1 - u0;
-            float tileHeight = v1 - v0;
+            // Keep all corner UVs well inside one atlas tile so interpolation never crosses tile boundaries.
+            // This prevents per-fragment tile selection in the block atlas shader from producing texture strips.
+            float uInset = Mathf.Max(UV_EPSILON, tileWidth * 0.05f);
+            float vInset = Mathf.Max(UV_EPSILON, tileHeight * 0.05f);
 
-            float repeatedU = tileWidth * Mathf.Max(dvTiles, 1);
-            float repeatedV = tileHeight * Mathf.Max(duTiles, 1);
+            float u0 = textureData.uvMin.x + uInset;
+            float v0 = textureData.uvMin.y + vInset;
+            float u1 = textureData.uvMax.x - uInset;
+            float v1 = textureData.uvMax.y - vInset;
 
             uvs.Add(new Vector2(u0, v0)); // bottom-left
             uvs.Add(new Vector2(u0, v1)); // top-left

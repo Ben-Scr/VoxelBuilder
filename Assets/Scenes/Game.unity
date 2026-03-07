@@ -17,7 +17,7 @@ RenderSettings:
   m_Fog: 1
   m_FogColor: {r: 0.7137255, g: 0.6156863, b: 0.69803923, a: 1}
   m_FogMode: 3
-  m_FogDensity: 0.005
+  m_FogDensity: 0.003
   m_LinearFogStart: 0
   m_LinearFogEnd: 300
   m_AmbientSkyColor: {r: 0.33333334, g: 0.33333334, b: 0.33333334, a: 1}
@@ -293,7 +293,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: bafbb16af7515a44c98e1e0222db524f, type: 2}
   - {fileID: 11400000, guid: d503642b6b0ec1d468a8fc8a9035a50f, type: 2}
   blockMaterial: {fileID: 2100000, guid: 16b6fe614bb815d47b94f305250b2d40, type: 2}
-  blockTexResolution: 32
   damageStages:
   - {fileID: 21300000, guid: 93f8d09cc78ed8641a411ef3aed8acd5, type: 3}
   - {fileID: 21300000, guid: 8a1937b8260e9f747bfe141f85a8a5ca, type: 3}
@@ -431,7 +430,7 @@ Camera:
     width: 1
     height: 1
   near clip plane: 0.01
-  far clip plane: 275
+  far clip plane: 10000
   field of view: 65
   orthographic: 0
   orthographic size: 5
@@ -1810,7 +1809,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   chunkPrefab: {fileID: 3185013692412290531, guid: b981763a46b934a499d0603c9bf705a8, type: 3}
   addColliders: 1
-  addTrees: 1
+  addTrees: 0
   viewDistance: 5
   viewDistanceY: 3
   shouldDisableChunks: 1
