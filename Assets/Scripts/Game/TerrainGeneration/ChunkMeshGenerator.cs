@@ -200,15 +200,15 @@ namespace BenScr.MinecraftClone
 
                         if (cell.isFluid)
                         {
-                            AddQuad(origin, du, dv, face, cell.textureData, fluidVertices, fluidNormals, fluidTriangles, fluidUvs);
+                            AddQuad(origin, du, dv, quadHeight, quadWidth, face, cell.textureData, fluidVertices, fluidNormals, fluidTriangles, fluidUvs);
                         }
                         else if (cell.isTransparent)
                         {
-                            AddQuad(origin, du, dv, face, cell.textureData, transparentVertices, transparentNormals, transparentTriangles, transparentUvs);
+                            AddQuad(origin, du, dv, quadHeight, quadWidth, face, cell.textureData, transparentVertices, transparentNormals, transparentTriangles, transparentUvs);
                         }
                         else
                         {
-                            AddQuad(origin, du, dv, face, cell.textureData, solidVertices, solidNormals, solidTriangles, solidUvs);
+                            AddQuad(origin, du, dv, quadHeight, quadWidth, face, cell.textureData, solidVertices, solidNormals, solidTriangles, solidUvs);
                         }
                     }
                 }
@@ -216,15 +216,17 @@ namespace BenScr.MinecraftClone
         }
 
         private static void AddQuad(
-          Vector3 origin,
-          Vector3 du,
-          Vector3 dv,
-          int face,
-          BlockData.FaceTextureData textureData,
-          List<Vector3> vertices,
-          List<Vector3> normals,
-          List<int> triangles,
-          List<Vector2> uvs)
+         Vector3 origin,
+         Vector3 du,
+         Vector3 dv,
+         int duTiles,
+         int dvTiles,
+         int face,
+         BlockData.FaceTextureData textureData,
+         List<Vector3> vertices,
+         List<Vector3> normals,
+         List<int> triangles,
+         List<Vector2> uvs)
         {
             int vertexIndex = vertices.Count;
 
@@ -238,7 +240,7 @@ namespace BenScr.MinecraftClone
                 normals.Add(cubeNormals[face]);
             }
 
-            AddTexture(textureData, ref uvs);
+            AddTexture(textureData, duTiles, dvTiles, ref uvs);
 
             triangles.Add(vertexIndex);
             triangles.Add(vertexIndex + 1);
@@ -246,6 +248,23 @@ namespace BenScr.MinecraftClone
             triangles.Add(vertexIndex + 2);
             triangles.Add(vertexIndex + 1);
             triangles.Add(vertexIndex + 3);
+        }
+
+        private static void AddTiledTexture(BlockData.FaceTextureData textureData, int quadWidth, int quadHeight, ref List<Vector2> uvs)
+        {
+            // These UVs are no longer atlas UVs directly.
+            // They are "local tiled UVs" that the shader must remap into the atlas tile.
+            //
+            // Vertex order must match AddQuad():
+            // 0 = origin
+            // 1 = origin + du
+            // 2 = origin + dv
+            // 3 = origin + du + dv
+
+            uvs.Add(new Vector2(0f, 0f));
+            uvs.Add(new Vector2(0f, quadHeight));
+            uvs.Add(new Vector2(quadWidth, 0f));
+            uvs.Add(new Vector2(quadWidth, quadHeight));
         }
 
         private static Vector3Int GetPositionForFace(int face, int u, int v, int slice)
@@ -349,17 +368,23 @@ namespace BenScr.MinecraftClone
             return haloBlocks[pos.x + 1, pos.y + 1, pos.z + 1];
         }
 
-        private static void AddTexture(BlockData.FaceTextureData textureData, ref List<Vector2> uvs)
+        private static void AddTexture(BlockData.FaceTextureData textureData, int duTiles, int dvTiles, ref List<Vector2> uvs)
         {
             float u0 = textureData.uvMin.x + UV_EPSILON;
             float v0 = textureData.uvMin.y + UV_EPSILON;
             float u1 = textureData.uvMax.x - UV_EPSILON;
             float v1 = textureData.uvMax.y - UV_EPSILON;
 
+            float tileWidth = u1 - u0;
+            float tileHeight = v1 - v0;
+
+            float repeatedU = tileWidth * Mathf.Max(dvTiles, 1);
+            float repeatedV = tileHeight * Mathf.Max(duTiles, 1);
+
             uvs.Add(new Vector2(u0, v0)); // bottom-left
-            uvs.Add(new Vector2(u0, v1)); // top-left
-            uvs.Add(new Vector2(u1, v0)); // bottom-right
-            uvs.Add(new Vector2(u1, v1)); // top-right
+            uvs.Add(new Vector2(u0, v0 + repeatedV)); // top-left
+            uvs.Add(new Vector2(u0 + repeatedU, v0)); // bottom-right
+            uvs.Add(new Vector2(u0 + repeatedU, v0 + repeatedV)); // top-right
         }
 
 
