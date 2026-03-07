@@ -216,17 +216,17 @@ namespace BenScr.MinecraftClone
         }
 
         private static void AddQuad(
-         Vector3 origin,
-         Vector3 du,
-         Vector3 dv,
-         int duTiles,
-         int dvTiles,
-         int face,
-         BlockData.FaceTextureData textureData,
-         List<Vector3> vertices,
-         List<Vector3> normals,
-         List<int> triangles,
-         List<Vector2> uvs)
+                  Vector3 origin,
+                  Vector3 du,
+                  Vector3 dv,
+                  int duTiles,
+                  int dvTiles,
+                  int face,
+                  BlockData.FaceTextureData textureData,
+                  List<Vector3> vertices,
+                  List<Vector3> normals,
+                  List<int> triangles,
+                  List<Vector2> uvs)
         {
             int vertexIndex = vertices.Count;
 
@@ -240,33 +240,13 @@ namespace BenScr.MinecraftClone
                 normals.Add(cubeNormals[face]);
             }
 
-            AddTexture(textureData, duTiles, dvTiles, ref uvs);
+            AddTexture(textureData,duTiles, dvTiles, ref uvs);
 
             triangles.Add(vertexIndex);
             triangles.Add(vertexIndex + 1);
             triangles.Add(vertexIndex + 2);
             triangles.Add(vertexIndex + 2);
-            triangles.Add(vertexIndex + 1);
-            triangles.Add(vertexIndex + 3);
         }
-
-        private static void AddTiledTexture(BlockData.FaceTextureData textureData, int quadWidth, int quadHeight, ref List<Vector2> uvs)
-        {
-            // These UVs are no longer atlas UVs directly.
-            // They are "local tiled UVs" that the shader must remap into the atlas tile.
-            //
-            // Vertex order must match AddQuad():
-            // 0 = origin
-            // 1 = origin + du
-            // 2 = origin + dv
-            // 3 = origin + du + dv
-
-            uvs.Add(new Vector2(0f, 0f));
-            uvs.Add(new Vector2(0f, quadHeight));
-            uvs.Add(new Vector2(quadWidth, 0f));
-            uvs.Add(new Vector2(quadWidth, quadHeight));
-        }
-
         private static Vector3Int GetPositionForFace(int face, int u, int v, int slice)
         {
             return face switch
