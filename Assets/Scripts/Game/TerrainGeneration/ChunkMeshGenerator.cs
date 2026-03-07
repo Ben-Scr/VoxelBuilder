@@ -246,6 +246,8 @@ namespace BenScr.MinecraftClone
             triangles.Add(vertexIndex + 1);
             triangles.Add(vertexIndex + 2);
             triangles.Add(vertexIndex + 2);
+            triangles.Add(vertexIndex + 1);
+            triangles.Add(vertexIndex + 3);
         }
         private static Vector3Int GetPositionForFace(int face, int u, int v, int slice)
         {
@@ -362,9 +364,9 @@ namespace BenScr.MinecraftClone
             float repeatedV = tileHeight * Mathf.Max(duTiles, 1);
 
             uvs.Add(new Vector2(u0, v0)); // bottom-left
-            uvs.Add(new Vector2(u0, v0 + repeatedV)); // top-left
-            uvs.Add(new Vector2(u0 + repeatedU, v0)); // bottom-right
-            uvs.Add(new Vector2(u0 + repeatedU, v0 + repeatedV)); // top-right
+            uvs.Add(new Vector2(u0, v1)); // top-left
+            uvs.Add(new Vector2(u1, v0)); // bottom-right
+            uvs.Add(new Vector2(u1, v1)); // top-right
         }
 
 
