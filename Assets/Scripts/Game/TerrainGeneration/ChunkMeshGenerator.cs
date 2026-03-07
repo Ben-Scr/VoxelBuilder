@@ -11,6 +11,7 @@ namespace BenScr.MinecraftClone
 
     public class ChunkMeshGenerator
     {
+        private const float UV_EPSILON = 0.0001f;
         public static readonly ConcurrentQueue<ThreadInfo<MeshData>> meshDataThreadInfoQueue = new ConcurrentQueue<ThreadInfo<MeshData>>();
 
         public static void Update()
@@ -134,7 +135,7 @@ namespace BenScr.MinecraftClone
                         {
                             valid = true,
                             blockId = blockId,
-                            textureId = block.GetTexture(face),
+                            textureData = block.GetTexture(face),
                             isFluid = block.isFluid,
                             isTransparent = block.isTransparent,
                         };
@@ -199,15 +200,15 @@ namespace BenScr.MinecraftClone
 
                         if (cell.isFluid)
                         {
-                            AddQuad(origin, du, dv, face, cell.textureId, fluidVertices, fluidNormals, fluidTriangles, fluidUvs);
+                            AddQuad(origin, du, dv, face, cell.textureData, fluidVertices, fluidNormals, fluidTriangles, fluidUvs);
                         }
                         else if (cell.isTransparent)
                         {
-                            AddQuad(origin, du, dv, face, cell.textureId, transparentVertices, transparentNormals, transparentTriangles, transparentUvs);
+                            AddQuad(origin, du, dv, face, cell.textureData, transparentVertices, transparentNormals, transparentTriangles, transparentUvs);
                         }
                         else
                         {
-                            AddQuad(origin, du, dv, face, cell.textureId, solidVertices, solidNormals, solidTriangles, solidUvs);
+                            AddQuad(origin, du, dv, face, cell.textureData, solidVertices, solidNormals, solidTriangles, solidUvs);
                         }
                     }
                 }
@@ -215,15 +216,15 @@ namespace BenScr.MinecraftClone
         }
 
         private static void AddQuad(
-            Vector3 origin,
-            Vector3 du,
-            Vector3 dv,
-            int face,
-            int textureId,
-            List<Vector3> vertices,
-            List<Vector3> normals,
-            List<int> triangles,
-            List<Vector2> uvs)
+          Vector3 origin,
+          Vector3 du,
+          Vector3 dv,
+          int face,
+          BlockData.FaceTextureData textureData,
+          List<Vector3> vertices,
+          List<Vector3> normals,
+          List<int> triangles,
+          List<Vector2> uvs)
         {
             int vertexIndex = vertices.Count;
 
@@ -237,7 +238,7 @@ namespace BenScr.MinecraftClone
                 normals.Add(cubeNormals[face]);
             }
 
-            AddTexture(textureId, ref uvs);
+            AddTexture(textureData, ref uvs);
 
             triangles.Add(vertexIndex);
             triangles.Add(vertexIndex + 1);
@@ -328,7 +329,7 @@ namespace BenScr.MinecraftClone
         {
             public bool valid;
             public int blockId;
-            public int textureId;
+            public BlockData.FaceTextureData textureData;
             public bool isFluid;
             public bool isTransparent;
 
@@ -337,7 +338,7 @@ namespace BenScr.MinecraftClone
                 return valid
                     && other.valid
                     && blockId == other.blockId
-                    && textureId == other.textureId
+                    && textureData.Matches(other.textureData)
                     && isFluid == other.isFluid
                     && isTransparent == other.isTransparent;
             }
@@ -348,22 +349,12 @@ namespace BenScr.MinecraftClone
             return haloBlocks[pos.x + 1, pos.y + 1, pos.z + 1];
         }
 
-        private static void AddTexture(int textureId, ref List<Vector2> uvs)
+        private static void AddTexture(BlockData.FaceTextureData textureData, ref List<Vector2> uvs)
         {
-            int col = textureId % TEXTURE_BLOCKS_COLS;
-            int rowFromTop = TEXTURE_BLOCKS_ROWS - 1 - (textureId / TEXTURE_BLOCKS_COLS);
-
-            float u = col * BLOCK_W;
-            float v = rowFromTop * BLOCK_H;
-
-
-            float epsU = 0.5f / TEXTURE_WIDTH;
-            float epsV = 0.5f / TEXTURE_HEIGHT;
-
-            float u0 = u + epsU;
-            float v0 = v + epsV;
-            float u1 = u + BLOCK_W - epsU;
-            float v1 = v + BLOCK_H - epsV;
+            float u0 = textureData.uvMin.x + UV_EPSILON;
+            float v0 = textureData.uvMin.y + UV_EPSILON;
+            float u1 = textureData.uvMax.x - UV_EPSILON;
+            float v1 = textureData.uvMax.y - UV_EPSILON;
 
             uvs.Add(new Vector2(u0, v0)); // bottom-left
             uvs.Add(new Vector2(u0, v1)); // top-left
