@@ -10,6 +10,7 @@ namespace BenScr.MinecraftClone
     using System;
     using System.Collections;
     using System.Collections.Generic;
+    using TMPro;
     using Unity.Mathematics;
     using UnityEngine;
     using UnityEngine.UI;
@@ -28,7 +29,8 @@ namespace BenScr.MinecraftClone
         [SerializeField] private int maxChunksGeneratePerFrame = 2;
         [SerializeField] private float addColliderDistance = 10f;
         [SerializeField] private PlayerController player;
-        [SerializeField] private Image loadTerrainSlider;
+        [SerializeField] private Image loadTerrainImage;
+        [SerializeField] private TextMeshProUGUI loadTerrainTxt;
 
         public static Action OnLoadedTerrain;
         public static TerrainGenerator instance;
@@ -79,6 +81,8 @@ namespace BenScr.MinecraftClone
 
         private IEnumerator InitializeTerrain()
         {
+            loadTerrainTxt.text = "Preparing Chunks 0%";
+
             yield return null;
 
             // poses are relative, already sorted nearest-first
@@ -98,9 +102,12 @@ namespace BenScr.MinecraftClone
                 if (++count % 10 == 0)
                 {
                     yield return null;
-                    loadTerrainSlider.fillAmount = count / chunksCount;
+                    loadTerrainImage.fillAmount = count / chunksCount;
+                    loadTerrainTxt.text = $"Preparing Chunks {(int)(loadTerrainImage.fillAmount * 2.0f * 100)}%";
                 }
             }
+
+            loadTerrainTxt.text = "Generating Chunks 0%";
 
             yield return null;
 
@@ -111,9 +118,13 @@ namespace BenScr.MinecraftClone
                 if (++count % 5 == 0)
                 {
                     yield return null;
-                    loadTerrainSlider.fillAmount = count / chunksCount;
+                    loadTerrainImage.fillAmount = count / chunksCount;
+                    loadTerrainTxt.text = $"Generating Chunks {(int)(loadTerrainImage.fillAmount * 100)}%";
                 }
             }
+
+            loadTerrainImage.fillAmount = 1.0f;
+            loadTerrainTxt.text = "Finished Loading Chunks";
 
             yield return new WaitForSeconds(1.0f);
 

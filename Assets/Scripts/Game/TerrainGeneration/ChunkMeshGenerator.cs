@@ -7,11 +7,6 @@ using UnityEngine;
 
 namespace BenScr.MinecraftClone
 {
-    using System;
-    using System.Collections.Concurrent;
-    using System.Collections.Generic;
-    using System.Threading;
-    using UnityEngine;
     using static AssetsContainer;
 
     public class ChunkMeshGenerator
@@ -58,52 +53,23 @@ namespace BenScr.MinecraftClone
             List<int> transparentTriangles = new List<int>();
             List<Vector2> transparentUvs = new List<Vector2>();
 
-            int solidVertexIndex = 0;
-            int fluidVertexIndex = 0;
-            int leavesVertexIndex = 0;
-
-            for (int x = 0; x < Chunk.CHUNK_SIZE; x++)
+            for (int face = 0; face < 6; face++)
             {
-                for (int y = 0; y < Chunk.CHUNK_HEIGHT; y++)
-                {
-                    for (int z = 0; z < Chunk.CHUNK_SIZE; z++)
-                    {
-                        int blockId = haloBlocks[x + 1, y + 1, z + 1];
-                        BlockData block = GetBlock(blockId);
-
-                        if (blockId != Chunk.BLOCK_AIR)
-                        {
-                            Vector3Int position = new Vector3Int(x, y, z);
-                            bool isFluid = block.isFluid;
-                            bool isTransparent = block.isTransparent;
-
-                            for (int face = 0; face < 6; face++)
-                            {
-                                int neighborBlockId = GetHalo(haloBlocks, position + cubeNormals[face]);
-                                BlockData neighbourBlock = GetBlock(neighborBlockId);
-
-                                bool neighbourIsTransparent = neighbourBlock.isTransparent;
-                                bool hidesFaceBecauseSameFluid = block.isFluid && neighbourBlock.id == block.id;
-
-                                if (neighbourIsTransparent && !hidesFaceBecauseSameFluid)
-                                {
-                                    if (isFluid)
-                                    {
-                                        AddFace(position, face, block, fluidVertices, fluidNormals, fluidTriangles, fluidUvs, ref fluidVertexIndex);
-                                    }
-                                    else if (isTransparent)
-                                    {
-                                        AddFace(position, face, block, transparentVertices, transparentNormals, transparentTriangles, transparentUvs, ref leavesVertexIndex);
-                                    }
-                                    else
-                                    {
-                                        AddFace(position, face, block, solidVertices, solidNormals, solidTriangles, solidUvs, ref solidVertexIndex);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                BuildGreedyFacesForDirection(
+                    haloBlocks,
+                    face,
+                    solidVertices,
+                    solidNormals,
+                    solidTriangles,
+                    solidUvs,
+                    fluidVertices,
+                    fluidNormals,
+                    fluidTriangles,
+                    fluidUvs,
+                    transparentVertices,
+                    transparentNormals,
+                    transparentTriangles,
+                    transparentUvs);
             }
 
             return new MeshData(
@@ -112,27 +78,166 @@ namespace BenScr.MinecraftClone
                new MeshSection(transparentTriangles, transparentVertices, transparentNormals, transparentUvs));
         }
 
-        private static void AddFace(
-           Vector3Int position,
-           int face,
-           BlockData block,
-           List<Vector3> vertices,
-           List<Vector3> normals,
-           List<int> triangles,
-           List<Vector2> uvs,
-           ref int vertexIndex)
+        private static void BuildGreedyFacesForDirection(
+            byte[,,] haloBlocks,
+            int face,
+            List<Vector3> solidVertices,
+            List<Vector3> solidNormals,
+            List<int> solidTriangles,
+            List<Vector2> solidUvs,
+            List<Vector3> fluidVertices,
+            List<Vector3> fluidNormals,
+            List<int> fluidTriangles,
+            List<Vector2> fluidUvs,
+            List<Vector3> transparentVertices,
+            List<Vector3> transparentNormals,
+            List<int> transparentTriangles,
+            List<Vector2> transparentUvs)
         {
-            vertices.Add(position + cubeVertices[cubeTriangles[face, 0]]);
-            vertices.Add(position + cubeVertices[cubeTriangles[face, 1]]);
-            vertices.Add(position + cubeVertices[cubeTriangles[face, 2]]);
-            vertices.Add(position + cubeVertices[cubeTriangles[face, 3]]);
+            GetMaskSizeForFace(face, out int width, out int height, out int slices);
+            GreedyCell[] mask = new GreedyCell[width * height];
+            bool[] used = new bool[width * height];
+
+            for (int slice = 0; slice < slices; slice++)
+            {
+                Array.Clear(mask, 0, mask.Length);
+
+                for (int v = 0; v < height; v++)
+                {
+                    for (int u = 0; u < width; u++)
+                    {
+                        Vector3Int position = GetPositionForFace(face, u, v, slice);
+                        int blockId = GetHalo(haloBlocks, position);
+
+                        if (blockId == Chunk.BLOCK_AIR)
+                        {
+                            continue;
+                        }
+
+                        BlockData block = GetBlock(blockId);
+                        if (block == null)
+                        {
+                            continue;
+                        }
+
+                        int neighborBlockId = GetHalo(haloBlocks, position + cubeNormals[face]);
+                        BlockData neighbourBlock = GetBlock(neighborBlockId);
+                        bool neighbourIsTransparent = neighbourBlock == null || neighbourBlock.isTransparent;
+                        bool hidesFaceBecauseSameFluid = block.isFluid && neighbourBlock != null && neighbourBlock.id == block.id;
+
+                        if (!neighbourIsTransparent || hidesFaceBecauseSameFluid)
+                        {
+                            continue;
+                        }
+
+                        mask[u + v * width] = new GreedyCell
+                        {
+                            valid = true,
+                            blockId = blockId,
+                            textureId = block.GetTexture(face),
+                            isFluid = block.isFluid,
+                            isTransparent = block.isTransparent,
+                        };
+                    }
+                }
+
+                Array.Clear(used, 0, used.Length);
+
+                for (int v = 0; v < height; v++)
+                {
+                    for (int u = 0; u < width; u++)
+                    {
+                        int startIdx = u + v * width;
+                        GreedyCell cell = mask[startIdx];
+
+                        if (!cell.valid || used[startIdx])
+                        {
+                            continue;
+                        }
+
+                        int quadWidth = 1;
+                        while (u + quadWidth < width)
+                        {
+                            int idx = u + quadWidth + v * width;
+                            if (used[idx] || !mask[idx].Matches(cell))
+                            {
+                                break;
+                            }
+
+                            quadWidth++;
+                        }
+
+                        int quadHeight = 1;
+                        bool canGrow = true;
+                        while (v + quadHeight < height && canGrow)
+                        {
+                            for (int checkU = 0; checkU < quadWidth; checkU++)
+                            {
+                                int idx = (u + checkU) + (v + quadHeight) * width;
+                                if (used[idx] || !mask[idx].Matches(cell))
+                                {
+                                    canGrow = false;
+                                    break;
+                                }
+                            }
+
+                            if (canGrow)
+                            {
+                                quadHeight++;
+                            }
+                        }
+
+                        for (int markV = 0; markV < quadHeight; markV++)
+                        {
+                            for (int markU = 0; markU < quadWidth; markU++)
+                            {
+                                used[(u + markU) + (v + markV) * width] = true;
+                            }
+                        }
+
+                        GetQuadForFace(face, u, v, slice, quadWidth, quadHeight, out Vector3 origin, out Vector3 du, out Vector3 dv);
+
+                        if (cell.isFluid)
+                        {
+                            AddQuad(origin, du, dv, face, cell.textureId, fluidVertices, fluidNormals, fluidTriangles, fluidUvs);
+                        }
+                        else if (cell.isTransparent)
+                        {
+                            AddQuad(origin, du, dv, face, cell.textureId, transparentVertices, transparentNormals, transparentTriangles, transparentUvs);
+                        }
+                        else
+                        {
+                            AddQuad(origin, du, dv, face, cell.textureId, solidVertices, solidNormals, solidTriangles, solidUvs);
+                        }
+                    }
+                }
+            }
+        }
+
+        private static void AddQuad(
+            Vector3 origin,
+            Vector3 du,
+            Vector3 dv,
+            int face,
+            int textureId,
+            List<Vector3> vertices,
+            List<Vector3> normals,
+            List<int> triangles,
+            List<Vector2> uvs)
+        {
+            int vertexIndex = vertices.Count;
+
+            vertices.Add(origin);
+            vertices.Add(origin + du);
+            vertices.Add(origin + dv);
+            vertices.Add(origin + du + dv);
 
             for (int i = 0; i < 4; i++)
             {
                 normals.Add(cubeNormals[face]);
             }
 
-            AddTexture(block.GetTexture(face), ref uvs);
+            AddTexture(textureId, ref uvs);
 
             triangles.Add(vertexIndex);
             triangles.Add(vertexIndex + 1);
@@ -140,8 +245,102 @@ namespace BenScr.MinecraftClone
             triangles.Add(vertexIndex + 2);
             triangles.Add(vertexIndex + 1);
             triangles.Add(vertexIndex + 3);
+        }
 
-            vertexIndex += 4;
+        private static Vector3Int GetPositionForFace(int face, int u, int v, int slice)
+        {
+            return face switch
+            {
+                0 or 1 => new Vector3Int(u, v, slice),
+                2 or 3 => new Vector3Int(u, slice, v),
+                4 or 5 => new Vector3Int(slice, v, u),
+                _ => throw new ArgumentOutOfRangeException(nameof(face), face, null),
+            };
+        }
+
+        private static void GetMaskSizeForFace(int face, out int width, out int height, out int slices)
+        {
+            switch (face)
+            {
+                case 0:
+                case 1:
+                    width = Chunk.CHUNK_SIZE;
+                    height = Chunk.CHUNK_HEIGHT;
+                    slices = Chunk.CHUNK_SIZE;
+                    break;
+                case 2:
+                case 3:
+                    width = Chunk.CHUNK_SIZE;
+                    height = Chunk.CHUNK_SIZE;
+                    slices = Chunk.CHUNK_HEIGHT;
+                    break;
+                case 4:
+                case 5:
+                    width = Chunk.CHUNK_SIZE;
+                    height = Chunk.CHUNK_HEIGHT;
+                    slices = Chunk.CHUNK_SIZE;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(face), face, null);
+            }
+        }
+
+        private static void GetQuadForFace(int face, int u, int v, int slice, int quadWidth, int quadHeight, out Vector3 origin, out Vector3 du, out Vector3 dv)
+        {
+            switch (face)
+            {
+                case 0: // back
+                    origin = new Vector3(u, v, slice);
+                    du = new Vector3(0, quadHeight, 0);
+                    dv = new Vector3(quadWidth, 0, 0);
+                    break;
+                case 1: // front
+                    origin = new Vector3(u + quadWidth, v, slice + 1);
+                    du = new Vector3(0, quadHeight, 0);
+                    dv = new Vector3(-quadWidth, 0, 0);
+                    break;
+                case 2: // top
+                    origin = new Vector3(u, slice + 1, v);
+                    du = new Vector3(0, 0, quadHeight);
+                    dv = new Vector3(quadWidth, 0, 0);
+                    break;
+                case 3: // bottom
+                    origin = new Vector3(u + quadWidth, slice, v);
+                    du = new Vector3(0, 0, quadHeight);
+                    dv = new Vector3(-quadWidth, 0, 0);
+                    break;
+                case 4: // left
+                    origin = new Vector3(slice, v, u + quadWidth);
+                    du = new Vector3(0, quadHeight, 0);
+                    dv = new Vector3(0, 0, -quadWidth);
+                    break;
+                case 5: // right
+                    origin = new Vector3(slice + 1, v, u);
+                    du = new Vector3(0, quadHeight, 0);
+                    dv = new Vector3(0, 0, quadWidth);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(face), face, null);
+            }
+        }
+
+        internal struct GreedyCell
+        {
+            public bool valid;
+            public int blockId;
+            public int textureId;
+            public bool isFluid;
+            public bool isTransparent;
+
+            public bool Matches(in GreedyCell other)
+            {
+                return valid
+                    && other.valid
+                    && blockId == other.blockId
+                    && textureId == other.textureId
+                    && isFluid == other.isFluid
+                    && isTransparent == other.isTransparent;
+            }
         }
 
         private static byte GetHalo(byte[,,] haloBlocks, Vector3Int pos)
