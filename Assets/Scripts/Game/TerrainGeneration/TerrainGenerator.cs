@@ -21,6 +21,8 @@ namespace BenScr.MinecraftClone
         public bool addColliders = false;
         public bool addTrees = true;
 
+        [SerializeField] private int initLoadDistance = 5;
+
         [SerializeField] private int viewDistance = 5;
         [SerializeField] private int viewDistanceY = 2;
         [SerializeField] private bool shouldDisableChunks = false;
@@ -81,16 +83,16 @@ namespace BenScr.MinecraftClone
 
         private IEnumerator InitializeTerrain()
         {
+            int originalViewDistance = viewDistance;
+            viewDistance = initLoadDistance;
+            UpdateViewDistance();
+
             loadTerrainTxt.text = "0%";
 
-            yield return null;
-
-            // poses are relative, already sorted nearest-first
-
-            float time = Time.realtimeSinceStartup;
+            float startTime = Time.realtimeSinceStartup;
 
             int count = 0;
-            float chunksCount = poses.Length * 2.0f;
+            float chunksCount = poses.Length;
 
             for (int i = 0; i < poses.Length; i++)
             {
@@ -105,11 +107,9 @@ namespace BenScr.MinecraftClone
                 {
                     yield return null;
                     loadTerrainImage.fillAmount = count / chunksCount;
-                    loadTerrainTxt.text = $"{(int)(loadTerrainImage.fillAmount * 2.0f * 100)}%";
+                    loadTerrainTxt.text = $"{(int)(loadTerrainImage.fillAmount * 100)}%";
                 }
             }
-
-            yield return null;
 
             foreach (var chunk in chunks.Values)
             {
@@ -129,11 +129,9 @@ namespace BenScr.MinecraftClone
             loadTerrainTxt.text = "100%";
             loadTerrainImage.fillAmount = 1.0f;
 
-            Debug.Log($"Generating Terrain Took: {Time.realtimeSinceStartup - time }");
+            Debug.Log($"Generating Terrain Took: {Time.realtimeSinceStartup - startTime }");
 
             ChunkMeshGenerator.Update();
-
-            yield return new WaitForSeconds(1.0f);
 
             if (TryGetHighestSolidBlockYAtColumn(0, 0, out int highestPosY))
             {
@@ -145,6 +143,7 @@ namespace BenScr.MinecraftClone
             }
 
             lastActiveChunks.Clear();
+
             foreach (var pos in currentActiveChunks)
                 lastActiveChunks.Add(pos);
 
@@ -157,6 +156,9 @@ namespace BenScr.MinecraftClone
 
             loadedTerrain = true;
             OnLoadedTerrain?.Invoke();
+
+            viewDistance = originalViewDistance;
+            UpdateViewDistance();
         }
 
 
