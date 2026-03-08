@@ -87,13 +87,19 @@ namespace BenScr.MinecraftClone
 
         private IEnumerator InitializeTerrain()
         {
-           // int originalViewDistance = viewDistance;
-           //viewDistance = initLoadDistance;
+            int originalViewDistance = viewDistance;
+            int originalViewDistanceY = viewDistanceY;
+
+            viewDistance = preloadViewDistance;
+            viewDistanceY = preloadViewDistanceY;
             UpdateViewDistance();
 
             loadTerrainTxt.text = "0%";
 
-            float startTime = Time.realtimeSinceStartup;
+            yield return null;
+
+
+            float time = Time.realtimeSinceStartup;
 
             int count = 0;
             float chunksCount = poses.Length;
@@ -115,6 +121,8 @@ namespace BenScr.MinecraftClone
                 }
             }
 
+            yield return null;
+
             foreach (var chunk in chunks.Values)
             {
                 if (!ChunkUtility.HasAllNeighborChunks(chunk.coordinate))
@@ -133,7 +141,7 @@ namespace BenScr.MinecraftClone
             loadTerrainTxt.text = "100%";
             loadTerrainImage.fillAmount = 1.0f;
 
-            Debug.Log($"Generating Terrain Took: {Time.realtimeSinceStartup - startTime }");
+            Debug.Log($"Generating Terrain Took: {Time.realtimeSinceStartup - time }");
 
             ChunkMeshGenerator.Update();
 
@@ -152,17 +160,32 @@ namespace BenScr.MinecraftClone
                 lastActiveChunks.Add(pos);
 
             lastPlayerChunk = ChunkUtility.GetChunkCoordinateFromPosition(playerTransform.position);
+            Vector3Int playerChunk = ChunkUtility.GetChunkCoordinateFromPosition(player.transform.position);
+            Vector3 playerPos = player.transform.position;
 
             if (addColliders)
             {
-                UpdateNearbyColliders(player.transform.position, ChunkUtility.GetChunkCoordinateFromPosition(player.transform.position));
+                UpdateNearbyColliders(playerPos, playerChunk );
             }
 
             loadedTerrain = true;
             OnLoadedTerrain?.Invoke();
 
-           // viewDistance = originalViewDistance;
-           // UpdateViewDistance();
+            viewDistance = originalViewDistance;
+            viewDistanceY = originalViewDistanceY;
+            UpdateViewDistance();
+
+
+            RebuildTargetChunkLists(playerChunk, playerPos);
+
+            for (int i = 0; i< viewDistance * viewDistance; i++)
+            {
+                ProcessChunkCreation();
+                ProcessChunkGeneration();
+            }
+
+            ChunkMeshGenerator.Update();
+            lastPlayerChunk = playerChunk;
         }
 
 
