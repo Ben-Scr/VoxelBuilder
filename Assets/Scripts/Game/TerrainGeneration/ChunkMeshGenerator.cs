@@ -123,11 +123,17 @@ namespace BenScr.MinecraftClone
 
                         int neighborBlockId = GetHalo(haloBlocks, position + cubeNormals[face]);
                         BlockData neighbourBlock = GetBlock(neighborBlockId);
-                        bool neighbourIsOpaque = neighbourBlock != null && !neighbourBlock.isTransparent;
-                        bool hidesFaceBecauseSameFluid = block.isFluid && neighbourBlock != null && neighbourBlock.id == block.id;
-                        bool hidesFaceBecauseSameTransparent = block.isTransparent && neighbourBlock != null && neighbourBlock.id == block.id;
 
-                        if (neighbourIsOpaque || hidesFaceBecauseSameFluid || hidesFaceBecauseSameTransparent)
+                        if(neighbourBlock == null) { continue; }
+
+                        bool neighbourIsOpaque = !neighbourBlock.isTransparent;
+                        bool hidesFaceBecauseSameFluid = block.isFluid && neighbourBlock.id == block.id;
+
+                        bool hidesFace = block.isTransparent
+                            ? (block.isFluid ? (hidesFaceBecauseSameFluid || neighbourIsOpaque) : neighbourIsOpaque)
+                            : neighbourIsOpaque;
+
+                        if (hidesFace)
                         {
                             continue;
                         }
@@ -241,7 +247,7 @@ namespace BenScr.MinecraftClone
                 normals.Add(cubeNormals[face]);
             }
 
-            AddTexture(textureData,duTiles, dvTiles, ref uvs);
+            AddTexture(textureData, duTiles, dvTiles, ref uvs);
 
             triangles.Add(vertexIndex);
             triangles.Add(vertexIndex + 1);
