@@ -81,7 +81,7 @@ namespace BenScr.MinecraftClone
 
         private IEnumerator InitializeTerrain()
         {
-            loadTerrainTxt.text = "Preparing Chunks 0%";
+            loadTerrainTxt.text = "0%";
 
             yield return null;
 
@@ -105,7 +105,7 @@ namespace BenScr.MinecraftClone
                 {
                     yield return null;
                     loadTerrainImage.fillAmount = count / chunksCount;
-                    loadTerrainTxt.text = $"Preparing Chunks {(int)(loadTerrainImage.fillAmount * 2.0f * 100)}%";
+                    loadTerrainTxt.text = $"{(int)(loadTerrainImage.fillAmount * 2.0f * 100)}%";
                 }
             }
 
@@ -122,12 +122,12 @@ namespace BenScr.MinecraftClone
                 {
                     yield return null;
                     loadTerrainImage.fillAmount = count / chunksCount;
-                    loadTerrainTxt.text = $"Generating Chunks {(int)(loadTerrainImage.fillAmount * 100)}%";
+                    loadTerrainTxt.text = $"{(int)(loadTerrainImage.fillAmount * 100)}%";
                 }
             }
 
+            loadTerrainTxt.text = "100%";
             loadTerrainImage.fillAmount = 1.0f;
-            loadTerrainTxt.text = "Finished Loading Chunks";
 
             Debug.Log($"Generating Terrain Took: {Time.realtimeSinceStartup - time }");
 
@@ -135,16 +135,13 @@ namespace BenScr.MinecraftClone
 
             yield return new WaitForSeconds(1.0f);
 
-            Chunk highestChunk = ChunkUtility.GetHighestChunkAt(Vector3.zero);
-
-            if (highestChunk != null)
+            if (TryGetHighestSolidBlockYAtColumn(0, 0, out int highestPosY))
             {
-                int highestPosY = GetHighestBlockPositionYAt(0, (int)highestChunk.position.y, 0);
                 playerTransform.position = new Vector3(0.5f, highestPosY + 2.0f, 0.5f);
             }
             else
             {
-                Debug.LogWarning("Found no highest chunk for player");
+                Debug.LogWarning("Found no valid spawn block at x:0 z:0");
             }
 
             lastActiveChunks.Clear();
@@ -162,20 +159,56 @@ namespace BenScr.MinecraftClone
             OnLoadedTerrain?.Invoke();
         }
 
-        private int GetHighestBlockPositionYAt(int x, int y, int z)
+
+        private bool TryGetHighestSolidBlockYAtColumn(int worldX, int worldZ, out int highestY)
         {
-            int highest = y;
+            highestY = int.MinValue;
 
-            for (int i = 0; i < Chunk.CHUNK_HEIGHT; i++)
+            Chunk highestChunk = ChunkUtility.GetHighestChunkAt(new Vector3(worldX, 0f, worldZ));
+            if (highestChunk == null)
             {
-                int worldY = y + i;
-                int blockId = ChunkUtility.GetBlockAtPosition(new Vector3Int(x, worldY, z));
-
-                if (blockId != Chunk.BLOCK_AIR && worldY > highest)
-                    highest = worldY;
+                return false;
             }
 
-            return highest;
+            int chunkX = Mathf.FloorToInt((float)worldX / Chunk.CHUNK_SIZE);
+            int chunkZ = Mathf.FloorToInt((float)worldZ / Chunk.CHUNK_SIZE);
+
+            int localX = worldX - chunkX * Chunk.CHUNK_SIZE;
+            int localZ = worldZ - chunkZ * Chunk.CHUNK_SIZE;
+
+            if (localX < 0) localX += Chunk.CHUNK_SIZE;
+            if (localZ < 0) localZ += Chunk.CHUNK_SIZE;
+
+            int minChunkY = highestChunk.coordinate.y;
+            foreach (Vector3Int coordinate in chunks.Keys)
+            {
+                if (coordinate.x == chunkX && coordinate.z == chunkZ && coordinate.y < minChunkY)
+                {
+                    minChunkY = coordinate.y;
+                }
+            }
+
+            for (int chunkY = highestChunk.coordinate.y; chunkY >= minChunkY; chunkY--)
+            {
+                Vector3Int coordinate = new Vector3Int(chunkX, chunkY, chunkZ);
+                if (!chunks.TryGetValue(coordinate, out Chunk chunk) || chunk.blocks == null)
+                {
+                    continue;
+                }
+
+                for (int localY = Chunk.CHUNK_HEIGHT - 1; localY >= 0; localY--)
+                {
+                    if (chunk.blocks[localX, localY, localZ] == Chunk.BLOCK_AIR)
+                    {
+                        continue;
+                    }
+
+                    highestY = chunkY * Chunk.CHUNK_HEIGHT + localY;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public void UpdateViewDistance()

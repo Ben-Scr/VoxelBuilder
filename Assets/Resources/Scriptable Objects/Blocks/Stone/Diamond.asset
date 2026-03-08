@@ -17,9 +17,28 @@ MonoBehaviour:
   isFluid: 0
   preview: {fileID: -1719228592, guid: 5335917e6daf04640a6505b8f6b432c8, type: 3}
   destroyEffect: {fileID: 0}
-  backTexture: 5
-  frontTexture: 5
-  topTexture: 5
-  bottomTexture: 5
-  leftTexture: 5
-  rightTexture: 5
+  faceTextures:
+    back:
+      texture: {fileID: -1719228592, guid: 5335917e6daf04640a6505b8f6b432c8, type: 3}
+      uvMin: {x: 0.5555556, y: 0.875}
+      uvMax: {x: 0.6666667, y: 1}
+    front:
+      texture: {fileID: -1719228592, guid: 5335917e6daf04640a6505b8f6b432c8, type: 3}
+      uvMin: {x: 0.5555556, y: 0.875}
+      uvMax: {x: 0.6666667, y: 1}
+    top:
+      texture: {fileID: -1719228592, guid: 5335917e6daf04640a6505b8f6b432c8, type: 3}
+      uvMin: {x: 0.5555556, y: 0.875}
+      uvMax: {x: 0.6666667, y: 1}
+    bottom:
+      texture: {fileID: -1719228592, guid: 5335917e6daf04640a6505b8f6b432c8, type: 3}
+      uvMin: {x: 0.5555556, y: 0.875}
+      uvMax: {x: 0.6666667, y: 1}
+    left:
+      texture: {fileID: -1719228592, guid: 5335917e6daf04640a6505b8f6b432c8, type: 3}
+      uvMin: {x: 0.5555556, y: 0.875}
+      uvMax: {x: 0.6666667, y: 1}
+    right:
+      texture: {fileID: -1719228592, guid: 5335917e6daf04640a6505b8f6b432c8, type: 3}
+      uvMin: {x: 0.5555556, y: 0.875}
+      uvMax: {x: 0.6666667, y: 1}
