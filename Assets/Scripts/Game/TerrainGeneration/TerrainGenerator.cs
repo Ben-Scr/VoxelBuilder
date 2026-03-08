@@ -107,12 +107,13 @@ namespace BenScr.MinecraftClone
                 }
             }
 
-            loadTerrainTxt.text = "Generating Chunks 0%";
-
             yield return null;
 
             foreach (var chunk in chunks.Values)
             {
+                if (!ChunkUtility.HasAllNeighborChunks(chunk.coordinate))
+                    continue;
+
                 chunk.Generate();
 
                 if (++count % 5 == 0)
@@ -125,6 +126,9 @@ namespace BenScr.MinecraftClone
 
             loadTerrainImage.fillAmount = 1.0f;
             loadTerrainTxt.text = "Finished Loading Chunks";
+
+
+            ChunkMeshGenerator.Update();
 
             yield return new WaitForSeconds(1.0f);
 
@@ -252,7 +256,6 @@ namespace BenScr.MinecraftClone
             }
             else if (addColliders)
             {
-                // still allow collider adds while work drains
                 UpdateNearbyColliders(playerPosition, playerChunk);
             }
 

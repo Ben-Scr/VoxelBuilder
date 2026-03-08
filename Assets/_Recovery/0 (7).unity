@@ -1810,7 +1810,7 @@ MonoBehaviour:
   chunkPrefab: {fileID: 3185013692412290531, guid: b981763a46b934a499d0603c9bf705a8, type: 3}
   addColliders: 0
   addTrees: 1
-  viewDistance: 5
+  viewDistance: 10
   viewDistanceY: 3
   shouldDisableChunks: 1
   maxChunksCreatePerFrame: 4
