@@ -39,25 +39,31 @@ namespace BenScr.MinecraftClone
 
         public static MeshData GenerateMeshData([ReadOnly] in byte[,,] haloBlocks)
         {
-            List<Vector3> solidVertices = new List<Vector3>();
-            List<Vector3> solidNormals = new List<Vector3>();
-            List<int> solidTriangles = new List<int>();
-            List<Vector2> solidUvs = new List<Vector2>();
+            const int initialFaceCapacity = 2048;
+            const int initialIndexCapacity = 3072;
 
-            List<Vector3> fluidVertices = new List<Vector3>();
-            List<Vector3> fluidNormals = new List<Vector3>();
-            List<int> fluidTriangles = new List<int>();
-            List<Vector2> fluidUvs = new List<Vector2>();
+            List<Vector3> solidVertices = new List<Vector3>(initialFaceCapacity);
+            List<Vector3> solidNormals = new List<Vector3>(initialFaceCapacity);
+            List<int> solidTriangles = new List<int>(initialIndexCapacity);
+            List<Vector2> solidUvs = new List<Vector2>(initialFaceCapacity);
 
-            List<Vector3> transparentVertices = new List<Vector3>();
-            List<Vector3> transparentNormals = new List<Vector3>();
-            List<int> transparentTriangles = new List<int>();
-            List<Vector2> transparentUvs = new List<Vector2>();
+            List<Vector3> fluidVertices = new List<Vector3>(256);
+            List<Vector3> fluidNormals = new List<Vector3>(256);
+            List<int> fluidTriangles = new List<int>(384);
+            List<Vector2> fluidUvs = new List<Vector2>(256);
+
+            List<Vector3> transparentVertices = new List<Vector3>(512);
+            List<Vector3> transparentNormals = new List<Vector3>(512);
+            List<int> transparentTriangles = new List<int>(768);
+            List<Vector2> transparentUvs = new List<Vector2>(512);
+
+            BlockData[] blockDefinitions = AssetsContainer.instance.blocks;
 
             for (int face = 0; face < 6; face++)
             {
                 BuildGreedyFacesForDirection(
                     haloBlocks,
+                    blockDefinitions,
                     face,
                     solidVertices,
                     solidNormals,
@@ -80,28 +86,37 @@ namespace BenScr.MinecraftClone
         }
 
         private static void BuildGreedyFacesForDirection(
-            byte[,,] haloBlocks,
-            int face,
-            List<Vector3> solidVertices,
-            List<Vector3> solidNormals,
-            List<int> solidTriangles,
-            List<Vector2> solidUvs,
-            List<Vector3> fluidVertices,
-            List<Vector3> fluidNormals,
-            List<int> fluidTriangles,
-            List<Vector2> fluidUvs,
-            List<Vector3> transparentVertices,
-            List<Vector3> transparentNormals,
-            List<int> transparentTriangles,
-            List<Vector2> transparentUvs)
+                   byte[,,] haloBlocks,
+                   BlockData[] blockDefinitions,
+                   int face,
+                   List<Vector3> solidVertices,
+                   List<Vector3> solidNormals,
+                   List<int> solidTriangles,
+                   List<Vector2> solidUvs,
+                   List<Vector3> fluidVertices,
+                   List<Vector3> fluidNormals,
+                   List<int> fluidTriangles,
+                   List<Vector2> fluidUvs,
+                   List<Vector3> transparentVertices,
+                   List<Vector3> transparentNormals,
+                   List<int> transparentTriangles,
+                   List<Vector2> transparentUvs)
         {
             GetMaskSizeForFace(face, out int width, out int height, out int slices);
             GreedyCell[] mask = new GreedyCell[width * height];
-            bool[] used = new bool[width * height];
+            int[] usedStamp = new int[width * height];
+            int stamp = 1;
 
             for (int slice = 0; slice < slices; slice++)
             {
                 Array.Clear(mask, 0, mask.Length);
+                stamp++;
+
+                if (stamp == int.MaxValue)
+                {
+                    Array.Clear(usedStamp, 0, usedStamp.Length);
+                    stamp = 1;
+                }
 
                 for (int v = 0; v < height; v++)
                 {
@@ -115,16 +130,25 @@ namespace BenScr.MinecraftClone
                             continue;
                         }
 
-                        BlockData block = GetBlock(blockId);
+                        if ((uint)blockId >= (uint)blockDefinitions.Length)
+                        {
+                            continue;
+                        }
+
+                        BlockData block = blockDefinitions[blockId];
                         if (block == null)
                         {
                             continue;
                         }
 
                         int neighborBlockId = GetHalo(haloBlocks, position + cubeNormals[face]);
-                        BlockData neighbourBlock = GetBlock(neighborBlockId);
+                        if ((uint)neighborBlockId >= (uint)blockDefinitions.Length)
+                        {
+                            continue;
+                        }
 
-                        if(neighbourBlock == null) { continue; }
+                        BlockData neighbourBlock = blockDefinitions[neighborBlockId];
+                        if (neighbourBlock == null) { continue; }
 
                         bool neighbourIsOpaque = !neighbourBlock.isTransparent;
                         bool hidesFaceBecauseSameFluid = block.isFluid && neighbourBlock.id == block.id;
@@ -149,8 +173,6 @@ namespace BenScr.MinecraftClone
                     }
                 }
 
-                Array.Clear(used, 0, used.Length);
-
                 for (int v = 0; v < height; v++)
                 {
                     for (int u = 0; u < width; u++)
@@ -158,7 +180,7 @@ namespace BenScr.MinecraftClone
                         int startIdx = u + v * width;
                         GreedyCell cell = mask[startIdx];
 
-                        if (!cell.valid || used[startIdx])
+                        if (!cell.valid || usedStamp[startIdx] == stamp)
                         {
                             continue;
                         }
@@ -167,7 +189,7 @@ namespace BenScr.MinecraftClone
                         while (u + quadWidth < width)
                         {
                             int idx = u + quadWidth + v * width;
-                            if (used[idx] || !mask[idx].Matches(cell))
+                            if (usedStamp[idx] == stamp || !mask[idx].Matches(cell))
                             {
                                 break;
                             }
@@ -182,7 +204,7 @@ namespace BenScr.MinecraftClone
                             for (int checkU = 0; checkU < quadWidth; checkU++)
                             {
                                 int idx = (u + checkU) + (v + quadHeight) * width;
-                                if (used[idx] || !mask[idx].Matches(cell))
+                                if (usedStamp[idx] == stamp || !mask[idx].Matches(cell))
                                 {
                                     canGrow = false;
                                     break;
@@ -199,7 +221,7 @@ namespace BenScr.MinecraftClone
                         {
                             for (int markU = 0; markU < quadWidth; markU++)
                             {
-                                used[(u + markU) + (v + markV) * width] = true;
+                                usedStamp[(u + markU) + (v + markV) * width] = stamp;
                             }
                         }
 

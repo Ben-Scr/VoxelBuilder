@@ -87,6 +87,8 @@ namespace BenScr.MinecraftClone
 
             // poses are relative, already sorted nearest-first
 
+            float time = Time.realtimeSinceStartup;
+
             int count = 0;
             float chunksCount = poses.Length * 2.0f;
 
@@ -99,7 +101,7 @@ namespace BenScr.MinecraftClone
                 chunks.Add(chunk.coordinate, chunk);
                 currentActiveChunks.Add(chunk.coordinate);
 
-                if (++count % 10 == 0)
+                if (++count % maxChunksCreatePerFrame == 0)
                 {
                     yield return null;
                     loadTerrainImage.fillAmount = count / chunksCount;
@@ -116,7 +118,7 @@ namespace BenScr.MinecraftClone
 
                 chunk.Generate();
 
-                if (++count % 5 == 0)
+                if (++count % maxChunksGeneratePerFrame == 0)
                 {
                     yield return null;
                     loadTerrainImage.fillAmount = count / chunksCount;
@@ -127,6 +129,7 @@ namespace BenScr.MinecraftClone
             loadTerrainImage.fillAmount = 1.0f;
             loadTerrainTxt.text = "Finished Loading Chunks";
 
+            Debug.Log($"Generating Terrain Took: {Time.realtimeSinceStartup - time }");
 
             ChunkMeshGenerator.Update();
 
@@ -149,6 +152,11 @@ namespace BenScr.MinecraftClone
                 lastActiveChunks.Add(pos);
 
             lastPlayerChunk = ChunkUtility.GetChunkCoordinateFromPosition(playerTransform.position);
+
+            if (addColliders)
+            {
+                UpdateNearbyColliders(player.transform.position, ChunkUtility.GetChunkCoordinateFromPosition(player.transform.position));
+            }
 
             loadedTerrain = true;
             OnLoadedTerrain?.Invoke();
@@ -310,15 +318,15 @@ namespace BenScr.MinecraftClone
             }
         }
 
-        private void UpdateNearbyColliders(Vector3 playerPosition, Vector3Int playerChunk)
+        private void UpdateNearbyColliders(Vector3 playerPosition, Vector3Int chunkCoordinate)
         {
             for (int i = 0; i < poses.Length; i++)
             {
                 Vector3Int rel = poses[i];
                 Vector3Int coordinate = new Vector3Int(
-                    playerChunk.x + rel.x,
-                    playerChunk.y + rel.y,
-                    playerChunk.z + rel.z
+                    chunkCoordinate.x + rel.x,
+                    chunkCoordinate.y + rel.y,
+                    chunkCoordinate.z + rel.z
                 );
 
                 if (!chunks.TryGetValue(coordinate, out var chunk))

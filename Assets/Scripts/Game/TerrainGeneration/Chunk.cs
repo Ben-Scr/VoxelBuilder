@@ -196,6 +196,10 @@ namespace BenScr.MinecraftClone
         }
         private void PrepareCubes()
         {
+            lowestGroundLevel = short.MaxValue;
+            highestGroundLevel = short.MinValue;
+            isAirOnly = true;
+
             blocks = new byte[CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_SIZE];
             NativeArray<int> heightMap = new NativeArray<int>(CHUNK_SIZE * CHUNK_SIZE, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             NativeArray<byte> Blocks = new NativeArray<byte>(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE, Allocator.TempJob);
@@ -264,23 +268,30 @@ namespace BenScr.MinecraftClone
 
                 if (!isAirOnly && IsTop)
                 {
-                    for (int x = 0; x < CHUNK_SIZE; x++)
-                        for (int y = 0; y < CHUNK_HEIGHT; y++)
-                            for (int z = 0; z < CHUNK_SIZE; z++)
-                            {
-                                int groundLevel = heightMap[x + z * CHUNK_SIZE];
+                    float chunkWorldY = position.y;
 
-                                if (groundLevel == (y - position.y) && TerrainGenerator.instance.addTrees && y + 13 <= CHUNK_HEIGHT)
+                    for (int x = 0; x < CHUNK_SIZE; x++)
+                    {
+                        for (int z = 0; z < CHUNK_SIZE; z++)
+                        {
+                            int groundLevel = heightMap[x + z * CHUNK_SIZE];
+                            int localGroundY = groundLevel - (int)chunkWorldY;
+
+                            if (localGroundY < 0 || localGroundY >= CHUNK_HEIGHT)
+                                continue;
+
+                            if (TerrainGenerator.instance.addTrees && localGroundY + 13 <= CHUNK_HEIGHT)
+                            {
+                                if (x > 3 && z > 3 && x < CHUNK_SIZE - 3 && z < CHUNK_SIZE - 3)
                                 {
-                                    if (x > 3 && z > 3 && x < CHUNK_SIZE - 3 && z < CHUNK_SIZE - 3)
+                                    if (UnityEngine.Random.Range(0, 75) == 0)
                                     {
-                                        if (UnityEngine.Random.Range(0, 75) == 0)
-                                        {
-                                            AddTree(x, y + 1, z);
-                                        }
+                                        AddTree(x, localGroundY + 1, z);
                                     }
                                 }
                             }
+                        }
+                    }
                 }
             }
             finally
@@ -494,8 +505,58 @@ namespace BenScr.MinecraftClone
                 }
             }
 
+            FillHaloEdgesAndCorners(halo, originX, originY, originZ);
+
             return halo;
         }
+
+        private static void FillHaloEdgesAndCorners(byte[,,] halo, int originX, int originY, int originZ)
+        {
+            int maxX = CHUNK_SIZE + 1;
+            int maxY = CHUNK_HEIGHT + 1;
+            int maxZ = CHUNK_SIZE + 1;
+
+            // Edges parallel to X axis
+            for (int x = 1; x < maxX; x++)
+            {
+                int worldX = originX + x - 1;
+                halo[x, 0, 0] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(worldX, originY - 1, originZ - 1));
+                halo[x, 0, maxZ] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(worldX, originY - 1, originZ + CHUNK_SIZE));
+                halo[x, maxY, 0] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(worldX, originY + CHUNK_HEIGHT, originZ - 1));
+                halo[x, maxY, maxZ] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(worldX, originY + CHUNK_HEIGHT, originZ + CHUNK_SIZE));
+            }
+
+            // Edges parallel to Y axis
+            for (int y = 1; y < maxY; y++)
+            {
+                int worldY = originY + y - 1;
+                halo[0, y, 0] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(originX - 1, worldY, originZ - 1));
+                halo[0, y, maxZ] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(originX - 1, worldY, originZ + CHUNK_SIZE));
+                halo[maxX, y, 0] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(originX + CHUNK_SIZE, worldY, originZ - 1));
+                halo[maxX, y, maxZ] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(originX + CHUNK_SIZE, worldY, originZ + CHUNK_SIZE));
+            }
+
+            // Edges parallel to Z axis
+            for (int z = 1; z < maxZ; z++)
+            {
+                int worldZ = originZ + z - 1;
+                halo[0, 0, z] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(originX - 1, originY - 1, worldZ));
+                halo[0, maxY, z] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(originX - 1, originY + CHUNK_HEIGHT, worldZ));
+                halo[maxX, 0, z] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(originX + CHUNK_SIZE, originY - 1, worldZ));
+                halo[maxX, maxY, z] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(originX + CHUNK_SIZE, originY + CHUNK_HEIGHT, worldZ));
+            }
+
+            // Corners
+            halo[0, 0, 0] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(originX - 1, originY - 1, originZ - 1));
+            halo[0, 0, maxZ] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(originX - 1, originY - 1, originZ + CHUNK_SIZE));
+            halo[0, maxY, 0] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(originX - 1, originY + CHUNK_HEIGHT, originZ - 1));
+            halo[0, maxY, maxZ] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(originX - 1, originY + CHUNK_HEIGHT, originZ + CHUNK_SIZE));
+            halo[maxX, 0, 0] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(originX + CHUNK_SIZE, originY - 1, originZ - 1));
+            halo[maxX, 0, maxZ] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(originX + CHUNK_SIZE, originY - 1, originZ + CHUNK_SIZE));
+            halo[maxX, maxY, 0] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(originX + CHUNK_SIZE, originY + CHUNK_HEIGHT, originZ - 1));
+            halo[maxX, maxY, maxZ] = (byte)ChunkUtility.GetBlockAtPosition(new Vector3Int(originX + CHUNK_SIZE, originY + CHUNK_HEIGHT, originZ + CHUNK_SIZE));
+        }
+
         private void OnMeshDataReceived([ReadOnly] MeshData meshData)
         {
             if (meshFilter == null) return;
