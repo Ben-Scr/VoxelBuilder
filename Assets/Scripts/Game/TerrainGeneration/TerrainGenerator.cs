@@ -1,9 +1,8 @@
-using BenScr.MinecraftClone;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
+using System.Collections;
 using UnityEngine.InputSystem;
 
 namespace BenScr.MinecraftClone
@@ -88,11 +87,8 @@ namespace BenScr.MinecraftClone
 
         private IEnumerator InitializeTerrain()
         {
-            int originalViewDistance = viewDistance;
-            int originalViewDistanceY = viewDistanceY;
-
-            viewDistance = preloadViewDistance;
-            viewDistanceY = preloadViewDistanceY;
+           // int originalViewDistance = viewDistance;
+           //viewDistance = initLoadDistance;
             UpdateViewDistance();
 
             loadTerrainTxt.text = "0%";
@@ -118,6 +114,29 @@ namespace BenScr.MinecraftClone
                     loadTerrainTxt.text = $"{(int)(loadTerrainImage.fillAmount * 100)}%";
                 }
             }
+
+            foreach (var chunk in chunks.Values)
+            {
+                if (!ChunkUtility.HasAllNeighborChunks(chunk.coordinate))
+                    continue;
+
+                chunk.Generate();
+
+                if (++count % maxChunksGeneratePerFrame == 0)
+                {
+                    yield return null;
+                    loadTerrainImage.fillAmount = count / chunksCount;
+                    loadTerrainTxt.text = $"{(int)(loadTerrainImage.fillAmount * 100)}%";
+                }
+            }
+
+            loadTerrainTxt.text = "100%";
+            loadTerrainImage.fillAmount = 1.0f;
+
+            Debug.Log($"Generating Terrain Took: {Time.realtimeSinceStartup - startTime }");
+
+            ChunkMeshGenerator.Update();
+
             if (TryGetHighestSolidBlockYAtColumn(0, 0, out int highestPosY))
             {
                 playerTransform.position = new Vector3(0.5f, highestPosY + 2.0f, 0.5f);
@@ -142,9 +161,8 @@ namespace BenScr.MinecraftClone
             loadedTerrain = true;
             OnLoadedTerrain?.Invoke();
 
-            viewDistance = originalViewDistance;
-            viewDistanceY = originalViewDistanceY;
-            UpdateViewDistance();
+           // viewDistance = originalViewDistance;
+           // UpdateViewDistance();
         }
 
 
