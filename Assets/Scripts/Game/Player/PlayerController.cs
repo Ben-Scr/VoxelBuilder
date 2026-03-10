@@ -176,7 +176,7 @@ namespace BenScr.MinecraftClone
             Vector3 input = GetInput();
 
 
-            if (!isGrounded)
+            if (!isGrounded && !isInFluid)
             {
                 rb.linearVelocity = new Vector2(rb.linearVelocity.x, rb.linearVelocity.y - gravity * Time.deltaTime);
             }
@@ -344,20 +344,15 @@ namespace BenScr.MinecraftClone
             if (rb == null || capsuleCollider == null)
                 return;
 
-            if (isFlying)
-            {
-                if (isInFluid)
-                {
-                    ExitFluid();
-                }
-
-                isHeadInFluid = false;
-                return;
-            }
 
             bool wasInFluid = isInFluid;
             isInFluid = TryGetFluidBlock(out currentFluidBlock);
             isHeadInFluid = CheckHeadInFluid();
+
+            if (isFlying)
+            {
+                return;
+            }
 
             if (isInFluid)
             {

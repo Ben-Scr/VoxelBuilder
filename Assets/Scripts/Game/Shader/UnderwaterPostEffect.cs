@@ -1,4 +1,6 @@
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.UI;
 
 namespace BenScr.MinecraftClone
 {
@@ -15,6 +17,8 @@ namespace BenScr.MinecraftClone
         private static readonly int StrengthId = Shader.PropertyToID("_Strength");
 
         private Material underwaterMaterial;
+        private Canvas overlayCanvas;
+        private Image overlayImage;
         private PlayerController player;
         private Camera targetCamera;
         private float currentStrength;
@@ -47,6 +51,8 @@ namespace BenScr.MinecraftClone
                     hideFlags = HideFlags.HideAndDontSave
                 };
             }
+
+            InitializeOverlayFallback();
         }
 
         private void Start()
@@ -72,6 +78,18 @@ namespace BenScr.MinecraftClone
                     DestroyImmediate(underwaterMaterial);
                 }
             }
+
+            if (overlayCanvas != null)
+            {
+                if (Application.isPlaying)
+                {
+                    Destroy(overlayCanvas.gameObject);
+                }
+                else
+                {
+                    DestroyImmediate(overlayCanvas.gameObject);
+                }
+            }
         }
 
         private void Update()
@@ -88,8 +106,9 @@ namespace BenScr.MinecraftClone
             if (isUnderwater)
             {
                 TryInitializeTintFromFluid();
-                Debug.Log("Underwater");
             }
+
+            UpdateOverlayTint();
         }
 
         private void OnRenderImage(RenderTexture source, RenderTexture destination)
@@ -103,6 +122,54 @@ namespace BenScr.MinecraftClone
             underwaterMaterial.SetColor(TintColorId, tintColor);
             underwaterMaterial.SetFloat(StrengthId, currentStrength);
             Graphics.Blit(source, destination, underwaterMaterial);
+        }
+
+        private void InitializeOverlayFallback()
+        {
+            bool usingScriptablePipeline = GraphicsSettings.currentRenderPipeline != null;
+            if (!usingScriptablePipeline || targetCamera == null)
+            {
+                return;
+            }
+
+            GameObject overlayRoot = new GameObject("UnderwaterOverlay", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            overlayRoot.transform.SetParent(targetCamera.transform, false);
+
+            overlayCanvas = overlayRoot.GetComponent<Canvas>();
+            overlayCanvas.renderMode = RenderMode.ScreenSpaceCamera;
+            overlayCanvas.worldCamera = targetCamera;
+            overlayCanvas.planeDistance = targetCamera.nearClipPlane + 0.01f;
+            overlayCanvas.sortingOrder = short.MaxValue;
+
+            CanvasScaler scaler = overlayRoot.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = 0.5f;
+
+            GameObject imageObject = new GameObject("Tint", typeof(RectTransform), typeof(Image));
+            imageObject.transform.SetParent(overlayRoot.transform, false);
+
+            RectTransform rect = imageObject.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            overlayImage = imageObject.GetComponent<Image>();
+            overlayImage.raycastTarget = false;
+            overlayImage.color = Color.clear;
+        }
+
+        private void UpdateOverlayTint()
+        {
+            if (overlayImage == null)
+            {
+                return;
+            }
+
+            Color overlayColor = tintColor;
+            overlayColor.a = currentStrength;
+            overlayImage.color = overlayColor;
         }
 
         private void TryInitializeTintFromFluid()
