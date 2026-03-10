@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Unity.Android.Gradle;
 using UnityEngine;
 
 namespace BenScr.MinecraftClone
 {
     public static class TerrainUtility
     {
+        public static Action<BlockData> OnDestroyBlock;
+
         public static void SetBlock(Vector3 position, int blockId)
         {
             Chunk chunk = ChunkUtility.GetChunkAtPosition(position);
@@ -46,7 +49,10 @@ namespace BenScr.MinecraftClone
                 if ((hitBlock.durability - damage) <= 1)
                 {
                     destroyed = true;
+
+                    BlockData block = chunk.GetBlock(localPosition);
                     chunk.SetBlock(localPosition, Chunk.BLOCK_AIR, true);
+                    OnDestroyBlock?.Invoke(block);
                 }
                 else
                 {
@@ -81,6 +87,7 @@ namespace BenScr.MinecraftClone
 
         private static void DestroyDamageTexture(Vector3 localPosition, Chunk chunk)
         {
+            BlockData block = chunk.GetBlock(localPosition);
             chunk.SetBlock(localPosition, Chunk.BLOCK_AIR, true);
             ByteVector3 key = (ByteVector3)localPosition;
 
@@ -89,6 +96,8 @@ namespace BenScr.MinecraftClone
                 GameObject.Destroy(damagedBlock.damageStage);
                 chunk.damagedBlocks.Remove(key);
             }
+
+            OnDestroyBlock?.Invoke(block);
         }
 
         private static void UpdateDamageTexture(int durability, DamagedBlock damagedBlock)

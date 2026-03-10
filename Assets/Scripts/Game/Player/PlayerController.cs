@@ -1,8 +1,16 @@
+using System;
 using UnityEngine;
 using static BenScr.MinecraftClone.SettingsContainer;
 
 namespace BenScr.MinecraftClone
 {
+    public enum GameMode
+    {
+        Survival = 0,
+        Exploration = 1,
+        Creative = 2,
+        Spectator = 3,
+    }
     public enum MovementMode
     {
         Default,
@@ -12,13 +20,13 @@ namespace BenScr.MinecraftClone
     public class PlayerController : MonoBehaviour
     {
         [Header("Movement")]
-        public MovementMode movementMode = MovementMode.Default;
+        public GameMode gameMode = GameMode.Survival;
+
         [SerializeField] private float walkSpeed = 5f;
         [SerializeField] private float runSpeed = 8f;
         [SerializeField] private float crouchSpeed = 2.5f;
         [SerializeField] private float jumpForce = 5f;
         private bool isGrounded;
-        internal bool isSpectator => isFlying && !capsuleCollider.enabled;
 
         [Header("Camera")]
         [SerializeField] private float cameraSensitivity = 2f;
@@ -34,7 +42,7 @@ namespace BenScr.MinecraftClone
         [SerializeField] private float flyAcceleration = 5f;
 
         private float curFlySpeedMultiplier = 1;
-        public bool isFlying => movementMode == MovementMode.Flying;
+        public bool isFlying;
 
 
         [Header("Physics")]
@@ -64,6 +72,8 @@ namespace BenScr.MinecraftClone
 
         private float inputSpace = 0;
         public static PlayerController instance;
+
+        public static Action<GameMode> OnSwitchGameMode;
 
         private static readonly Vector3[] fluidCheckDirections = new Vector3[]
         {
@@ -107,8 +117,35 @@ namespace BenScr.MinecraftClone
             }
         }
 
+        private void OnEnable()
+        {
+            GameController.OnFreeze += OnPlayerFreeze;
+            GameController.OnUnFreeze += OnPlayerUnFreeze;
+        }
+        private void OnDisable()
+        {
+            GameController.OnFreeze -= OnPlayerFreeze;
+            GameController.OnUnFreeze -= OnPlayerUnFreeze;
+        }
+
+        private void OnPlayerFreeze(FreezeReason freezeReason)
+        {
+            if (GameController.IsPlayerFrozen)
+                rb.constraints = RigidbodyConstraints.FreezeAll;
+
+        }
+        private void OnPlayerUnFreeze(FreezeReason freezeReason)
+        {
+
+            if (!GameController.IsPlayerFrozen)
+                rb.constraints = isFlying && gameMode == GameMode.Spectator ? RigidbodyConstraints.FreezeAll : RigidbodyConstraints.FreezeRotation;
+            ;
+        }
+
         public void Update()
         {
+            if (GameController.IsPlayerFrozen) return;
+
             isGrounded = IsGrounded();
             inputSpace += Time.deltaTime;
 
@@ -144,7 +181,7 @@ namespace BenScr.MinecraftClone
                 rb.linearVelocity = new Vector2(rb.linearVelocity.x, rb.linearVelocity.y - gravity * Time.deltaTime);
             }
 
-            if (!isSpectator)
+            if (gameMode != GameMode.Spectator)
             {
                 if (isInFluid && !isFlying)
                 {
@@ -166,14 +203,14 @@ namespace BenScr.MinecraftClone
                 transform.position += input * Time.deltaTime;
             }
 
-            if (Input.GetKey(KeyCode.Space) && !isInFluid && isGrounded  && rb.linearVelocity.y <= 0.1f)
+            if (Input.GetKey(KeyCode.Space) && !isInFluid && isGrounded && rb.linearVelocity.y <= 0.1f)
             {
                 Jump();
             }
 
-            if (Input.GetKeyDown(KeyCode.Space))
+            if (Input.GetKeyDown(KeyCode.Space) && gameMode == GameMode.Creative)
             {
-                if (!isSpectator && inputSpace < doubleSpaceThreshold)
+                if (gameMode != GameMode.Spectator && inputSpace < doubleSpaceThreshold)
                 {
                     SetFlyingMode();
                 }
@@ -197,7 +234,7 @@ namespace BenScr.MinecraftClone
 
         public void SetFlyingMode()
         {
-            movementMode = movementMode == MovementMode.Default ? MovementMode.Flying : MovementMode.Default;
+            isFlying = !isFlying;
 
             if (isFlying)
             {
@@ -214,9 +251,14 @@ namespace BenScr.MinecraftClone
 
         public void SetSpectatorMode()
         {
-            if (!isFlying || isSpectator) SetFlyingMode();
+            isFlying = gameMode == GameMode.Spectator ? false : true;
+
             capsuleCollider.enabled = !isFlying;
             rb.constraints = isFlying ? RigidbodyConstraints.FreezeAll : RigidbodyConstraints.FreezeRotation;
+
+            gameMode = gameMode == GameMode.Spectator ? GameMode.Survival : GameMode.Spectator;
+
+            OnSwitchGameMode?.Invoke(gameMode);
         }
 
         public void Jump()

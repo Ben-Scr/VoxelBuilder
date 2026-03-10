@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace BenScr.MinecraftClone
 {
+
     public abstract class ItemData : ScriptableObject
     {
         [Header("General")]
@@ -10,8 +11,8 @@ namespace BenScr.MinecraftClone
         public int id;
         public Sprite sprite;
         public ushort stackSize = 16;
-        public string _name;
-        public string Name => "";
+        [SerializeField] internal string _name;
+        public string Name => _name;
         internal string NameEnglish;
 
         public string description;

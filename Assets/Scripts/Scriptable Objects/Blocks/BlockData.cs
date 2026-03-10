@@ -52,7 +52,8 @@ namespace BenScr.MinecraftClone
         public bool isTransparent;
         public bool isFluid;
 
-        public Sprite preview;
+        public ItemData itemData;
+
         public GameObject destroyEffect;
 
         [Serializable]

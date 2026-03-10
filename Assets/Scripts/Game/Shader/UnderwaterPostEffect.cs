@@ -88,6 +88,7 @@ namespace BenScr.MinecraftClone
             if (isUnderwater)
             {
                 TryInitializeTintFromFluid();
+                Debug.Log("Underwater");
             }
         }
 
@@ -117,12 +118,12 @@ namespace BenScr.MinecraftClone
             }
 
             Material fluidMaterial = AssetsContainer.instance.fluidMaterial;
-            if (!fluidMaterial.HasProperty("_Color"))
+            if (!fluidMaterial.HasProperty("_TintColor"))
             {
                 return;
             }
 
-            Color fluidColor = fluidMaterial.GetColor("_Color");
+            Color fluidColor = fluidMaterial.GetColor("_TintColor");
             fluidColor.a = 1f;
             if (!tintInitializedFromFluid || !ApproximatelyEqual(fluidColor, cachedFluidTint))
             {

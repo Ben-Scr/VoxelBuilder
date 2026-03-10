@@ -165,7 +165,7 @@ namespace BenScr.MinecraftClone
 
             if (addColliders)
             {
-                UpdateNearbyColliders(playerPos, playerChunk );
+                UpdateNearbyColliders(playerPos, playerChunk);
             }
 
             loadedTerrain = true;
@@ -174,18 +174,6 @@ namespace BenScr.MinecraftClone
             viewDistance = originalViewDistance;
             viewDistanceY = originalViewDistanceY;
             UpdateViewDistance();
-
-
-            RebuildTargetChunkLists(playerChunk, playerPos);
-
-            for (int i = 0; i< viewDistance * viewDistance; i++)
-            {
-                ProcessChunkCreation();
-                ProcessChunkGeneration();
-            }
-
-            ChunkMeshGenerator.Update();
-            lastPlayerChunk = playerChunk;
         }
 
 

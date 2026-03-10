@@ -10,45 +10,71 @@ namespace BenScr.MinecraftClone
     {
         private static readonly Vector3 halfExtents = new Vector3(0.499f, 0.499f, 0.499f);
 
-        [SerializeField] private BlockSelectionManager blockSelectionManager;
         [SerializeField] private float maxInteractionDistance = 5;
         [SerializeField] private GameObject highlightBlock;
         [SerializeField] private GameObject damageStagePrefab;
         [SerializeField] private float breakBlockCooldown = 0.1f;
         [SerializeField] private float placeBlockCooldown = 0.1f;
 
+        private Slot selectedBlockItemSlot;
+        private BlockData GetSelectedBlock()
+        {
+            BlockItemData blockItemData = (BlockItemData)selectedBlockItemSlot?.item.itemData;
+            return blockItemData.block;
+        }
+
         private Vector3 highlightPosition;
         private Vector3 placeBlockPosition;
-        private bool isHighlightBlockVisible = false;
 
 
         private float breakBlockTimer = 0f;
         private float placeBlockTimer = 0f;
 
+        private bool isActive = true;
+        private bool highlightBlockActive = false;
+        private bool blockInRange = false;
 
-        void Update()
+        private void OnEnable()
         {
-            if (!PlayerController.instance) return;
+            InventoryManager.OnSwitchSlot += OnSwitchSlot;
+            InventoryManager.OnUpdateSlot += OnSwitchSlot;
 
-            if (PlayerController.instance.isSpectator)
+            PlayerController.OnSwitchGameMode += OnSwitchGameMode;
+            TerrainUtility.OnDestroyBlock += OnDestroyBlock;
+        }
+        private void OnDisable()
+        {
+            InventoryManager.OnSwitchSlot -= OnSwitchSlot;
+            InventoryManager.OnUpdateSlot -= OnSwitchSlot;
+
+            PlayerController.OnSwitchGameMode -= OnSwitchGameMode;
+            TerrainUtility.OnDestroyBlock -= OnDestroyBlock;
+        }
+
+        private void OnDestroyBlock(BlockData blockData)
+        {
+            if (blockData.itemData)
             {
-                breakBlockTimer = 0;
-                placeBlockTimer = 0;
-
-                highlightBlock.SetActive(false);
-                return;
+                InventoryManager.AddItem(blockData.itemData, 1);
             }
+
+            Debug.Log("Destroyed Block: " + blockData?.itemData?.name ?? "null");
+        }
+
+        private void Update()
+        {
+            if (!PlayerController.instance || GameController.IsFrozen || !isActive) return;
 
             breakBlockTimer += Time.deltaTime;
             placeBlockTimer += Time.deltaTime;
 
-            if (isHighlightBlockVisible)
+            if (blockInRange)
             {
                 if ((PlayerController.instance.isFlying ? Input.GetMouseButton(0) : Input.GetMouseButtonDown(0)) && breakBlockTimer > breakBlockCooldown)
                 {
                     breakBlockTimer = 0f;
 
-                    if (PlayerController.instance.isFlying)
+                    if (PlayerController.instance.gameMode == GameMode.Creative)
                         TerrainUtility.DestroyBlock(highlightPosition);
                     else
                         TerrainUtility.DamageBlock(highlightPosition, 1);
@@ -60,8 +86,11 @@ namespace BenScr.MinecraftClone
                     Vector3 center = placeBlockPosition + new Vector3(0.5f, 0.5f, 0.5f);
                     bool overlapsWithPlayer = Physics.CheckBox(center, halfExtents, Quaternion.identity, LayerMask.GetMask("Player"));
 
-                    if (!overlapsWithPlayer)
-                        TerrainUtility.SetBlock(placeBlockPosition, blockSelectionManager.selectedBlock.id);
+                    if (!overlapsWithPlayer && selectedBlockItemSlot != null)
+                    {
+                        TerrainUtility.SetBlock(placeBlockPosition, GetSelectedBlock().id);
+                        InventoryManager.RemoveItem(selectedBlockItemSlot, 1);
+                    }
                 }
             }
 
@@ -74,8 +103,6 @@ namespace BenScr.MinecraftClone
 
             Vector3 origin = cam.position;
             Vector3 dir = cam.forward.normalized;
-
-            isHighlightBlockVisible = false;
 
             Vector3Int current = new Vector3Int(
                 Mathf.FloorToInt(origin.x),
@@ -114,10 +141,9 @@ namespace BenScr.MinecraftClone
                     placeBlockPosition = current + hitNormal;
 
                     highlightBlock.transform.position = (Vector3)current + Vector3.one * 0.5f;
-                    isHighlightBlockVisible = true;
 
-                    if (!highlightBlock.activeSelf)
-                        highlightBlock.SetActive(true);
+                    highlightBlock.SetActive(highlightBlockActive);
+                    blockInRange = true;
 
                     if (Input.GetKeyDown(KeyCode.E))
                     {
@@ -170,8 +196,44 @@ namespace BenScr.MinecraftClone
                 }
             }
 
-            if (highlightBlock.activeSelf)
-                highlightBlock.SetActive(false);
+            highlightBlock.SetActive(false);
+            blockInRange = false;
+        }
+
+        private void OnSwitchSlot(Slot slot)
+        {
+            if (slot?.item?.itemData is BlockItemData)
+            {
+                isActive = true;
+                selectedBlockItemSlot = slot;
+                highlightBlockActive = true;
+            }
+            else
+            {
+                selectedBlockItemSlot = null;
+                highlightBlockActive = false;
+                //Deactivate();
+            }
+        }
+        private void OnSwitchGameMode(GameMode gameMode)
+        {
+            if (gameMode == GameMode.Spectator)
+            {
+                Deactivate();
+            }
+            else
+            {
+                isActive = true;
+            }
+        }
+
+        private void Deactivate()
+        {
+            isActive = false;
+            breakBlockTimer = 0;
+            placeBlockTimer = 0;
+
+            highlightBlock.SetActive(false);
         }
     }
 }

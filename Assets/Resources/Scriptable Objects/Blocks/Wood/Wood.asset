@@ -15,7 +15,7 @@ MonoBehaviour:
   durability: 10
   isTransparent: 0
   isFluid: 0
-  preview: {fileID: -1696727680, guid: 5335917e6daf04640a6505b8f6b432c8, type: 3}
+  itemData: {fileID: 11400000, guid: 3a5babc30f326cf409f19fe740e939b7, type: 2}
   destroyEffect: {fileID: 0}
   faceTextures:
     back:
