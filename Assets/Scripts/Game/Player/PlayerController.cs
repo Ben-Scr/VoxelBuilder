@@ -187,6 +187,14 @@ namespace BenScr.MinecraftClone
                 {
                     Vector3 currentVelocity = rb.linearVelocity;
                     Vector3 targetVelocity = new Vector3(input.x, input.y, input.z);
+
+                    bool isTryingToSwimUp = Input.GetKey(KeyCode.Space);
+                    if (!isHeadInFluid && targetVelocity.y > 0f && !isTryingToSwimUp)
+                    {
+                        targetVelocity.y = 0f;
+                        currentVelocity.y = Mathf.Min(currentVelocity.y, 0f);
+                    }
+
                     Vector3 blendedVelocity = Vector3.Lerp(currentVelocity, targetVelocity, Time.deltaTime * swimLerpSpeed);
                     blendedVelocity.y = Mathf.Clamp(blendedVelocity.y, -swimVerticalSpeed, swimVerticalSpeed);
                     rb.linearVelocity = blendedVelocity;
@@ -307,8 +315,9 @@ namespace BenScr.MinecraftClone
                 }
                 if (!ascend && !descend)
                 {
-                    vertical = swimBuoyancy;
+                    vertical = isHeadInFluid ? swimBuoyancy : 0f;
                 }
+
 
                 velocity.y = Mathf.Clamp(vertical, -swimVerticalSpeed, swimVerticalSpeed);
                 return velocity;
